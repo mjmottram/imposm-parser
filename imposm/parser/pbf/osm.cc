@@ -4,11 +4,11 @@
 #include <sstream>
 #include "structmember.h"
 #include "osm.pb.h"
+#include <py3c/py3c.h>
+#include <py3c/tpflags.h>
 
 #include <google/protobuf/io/coded_stream.h>
 #include <google/protobuf/io/zero_copy_stream_impl_lite.h>
-
-
 
 
 static PyObject *
@@ -71,10 +71,11 @@ fastpb_convert9(const ::std::string &value)
     return PyUnicode_Decode(value.data(), value.length(), "utf-8", NULL);
 }
 
+
 static PyObject *
 fastpb_convert12(const ::std::string &value)
 {
-    return PyString_FromStringAndSize(value.data(), value.length());
+    return PyStr_FromStringAndSize(value.data(), value.length());
 }
 
 static PyObject *
@@ -87,10 +88,72 @@ static PyObject *
 fastpb_convert14(int value)
 {
     // TODO(robbyw): Check EnumName_IsValid(value)
+  //#if IS_PY3
+  //    return PyLong_FromLong(value);
+  //#else
     return PyInt_FromLong(value);
+    //#endif
 }
 
 
+static ::google::protobuf::uint32
+uint32_convert(PyObject* value, const char* message)
+{
+#if IS_PY3
+  if (PyLong_Check(value)) {
+    return PyLong_AsUnsignedLong(value);
+  }
+#else
+  if (PyInt_Check(value)) {
+    return PyInt_AsUnsignedLongMask(value);
+  } else if (PyLong_Check(value)) {
+    return PyLong_AsUnsignedLong(value);
+  }
+#endif
+  else {
+    PyErr_SetString(PyExc_TypeError, message);
+    throw -1;
+  }
+}
+
+
+static ::google::protobuf::int32
+int32_convert(PyObject* value, const char* message)
+{
+#if IS_PY3
+  if (PyLong_Check(value)) {
+    return PyLong_AsLong(value);
+  }
+#else
+  if (PyInt_Check(value)) {
+    return PyInt_AsLong(value);
+  }
+#endif
+  else {
+    PyErr_SetString(PyExc_TypeError, message);
+    throw -1;
+  }
+}
+
+static ::google::protobuf::int64
+int64_convert(PyObject* value, const char* message)
+{
+#if IS_PY3
+  if (PyLong_Check(value)) {
+    return PyLong_AsLongLong(value);
+  }
+#else
+  if (PyInt_Check(value)) {
+    return PyInt_AsLong(value);
+  } else if (PyLong_Check(value)) {
+    return PyLong_AsLongLong(value);
+  }
+#endif
+  else {
+    PyErr_SetString(PyExc_TypeError, message);
+    throw -1;
+  }
+}
 
 
 
@@ -110,7 +173,7 @@ namespace {
   Blob_dealloc(Blob* self)
   {
       delete self->protobuf;
-      self->ob_type->tp_free((PyObject*)self);
+      Py_TYPE(self)->tp_free((PyObject*)self);
   }
 
   PyObject *
@@ -143,7 +206,7 @@ namespace {
       Py_BEGIN_ALLOW_THREADS
       self->protobuf->SerializeToString(&result);
       Py_END_ALLOW_THREADS
-      return PyString_FromStringAndSize(result.data(), result.length());
+      return PyStr_FromStringAndSize(result.data(), result.length());
   }
 
 
@@ -169,14 +232,14 @@ namespace {
       Py_XDECREF(sequence);
       delete outputStream;
       delete output;
-      return PyString_FromStringAndSize(result.data(), result.length());
+      return PyStr_FromStringAndSize(result.data(), result.length());
   }
 
 
   PyObject *
   Blob_ParseFromString(Blob* self, PyObject *value)
   {
-      std::string serialized(PyString_AsString(value), PyString_Size(value));
+      std::string serialized(PyStr_AsString(value), PyBytes_Size(value));
       Py_BEGIN_ALLOW_THREADS
       self->protobuf->ParseFromString(serialized);
       Py_END_ALLOW_THREADS
@@ -188,7 +251,7 @@ namespace {
   Blob_ParseFromLongString(Blob* self, PyObject *value)
   {
       google::protobuf::io::ZeroCopyInputStream* input =
-          new google::protobuf::io::ArrayInputStream(PyString_AsString(value), PyString_Size(value));
+          new google::protobuf::io::ArrayInputStream(PyStr_AsString(value), PyBytes_Size(value));
       google::protobuf::io::CodedInputStream* inputStream =
           new google::protobuf::io::CodedInputStream(input);
       inputStream->SetTotalBytesLimit(512 * 1024 * 1024, 512 * 1024 * 1024);
@@ -216,7 +279,7 @@ namespace {
       }
 
       google::protobuf::io::ZeroCopyInputStream* input =
-          new google::protobuf::io::ArrayInputStream(PyString_AsString(value), PyString_Size(value));
+          new google::protobuf::io::ArrayInputStream(PyStr_AsString(value), PyBytes_Size(value));
       google::protobuf::io::CodedInputStream* inputStream =
           new google::protobuf::io::CodedInputStream(input);
       inputStream->SetTotalBytesLimit(512 * 1024 * 1024, 512 * 1024 * 1024);
@@ -294,12 +357,12 @@ namespace {
 
       
         // string
-        if (! PyString_Check(value)) {
+        if (! PyStr_Check(value)) {
           PyErr_SetString(PyExc_TypeError, "The raw attribute value must be a string");
           return -1;
         }
 
-        std::string protoValue(PyString_AsString(value), PyString_Size(value));
+        std::string protoValue(PyStr_AsString(value), PyBytes_Size(value));
 
       
 
@@ -345,11 +408,10 @@ namespace {
         ::google::protobuf::int32 protoValue;
 
         // int32
-        if (PyInt_Check(value)) {
-          protoValue = PyInt_AsLong(value);
-        } else {
-          PyErr_SetString(PyExc_TypeError,
-                          "The raw_size attribute value must be an integer");
+	try {
+	  protoValue = int32_convert(value, "The raw_size attribute value must be an integer");
+	}
+	catch (int e) {
           return -1;
         }
 
@@ -395,12 +457,12 @@ namespace {
 
       
         // string
-        if (! PyString_Check(value)) {
+        if (! PyStr_Check(value)) {
           PyErr_SetString(PyExc_TypeError, "The zlib_data attribute value must be a string");
           return -1;
         }
 
-        std::string protoValue(PyString_AsString(value), PyString_Size(value));
+        std::string protoValue(PyStr_AsString(value), PyBytes_Size(value));
 
       
 
@@ -444,12 +506,12 @@ namespace {
 
       
         // string
-        if (! PyString_Check(value)) {
+        if (! PyStr_Check(value)) {
           PyErr_SetString(PyExc_TypeError, "The lzma_data attribute value must be a string");
           return -1;
         }
 
-        std::string protoValue(PyString_AsString(value), PyString_Size(value));
+        std::string protoValue(PyStr_AsString(value), PyBytes_Size(value));
 
       
 
@@ -493,12 +555,12 @@ namespace {
 
       
         // string
-        if (! PyString_Check(value)) {
+        if (! PyStr_Check(value)) {
           PyErr_SetString(PyExc_TypeError, "The OBSOLETE_bzip2_data attribute value must be a string");
           return -1;
         }
 
-        std::string protoValue(PyString_AsString(value), PyString_Size(value));
+        std::string protoValue(PyStr_AsString(value), PyBytes_Size(value));
 
       
 
@@ -589,7 +651,7 @@ namespace {
   Blob_richcompare(PyObject *self, PyObject *other, int op)
   {
       PyObject *result = NULL;
-      if (!PyType_IsSubtype(other->ob_type, &BlobType)) {
+      if (!PyType_IsSubtype(Py_TYPE(other), &BlobType)) {
           result = Py_NotImplemented;
       } else {
           // This is not a particularly efficient implementation since it never short circuits, but it's better
@@ -647,7 +709,7 @@ namespace {
         result << "raw=";
         member = Blob_getraw(self, NULL);
         memberRepr = PyObject_Repr(member);
-        result << PyString_AsString(memberRepr);
+        result << PyStr_AsString(memberRepr);
         Py_XDECREF(memberRepr);
         Py_XDECREF(member);
       
@@ -657,7 +719,7 @@ namespace {
         result << "raw_size=";
         member = Blob_getraw_size(self, NULL);
         memberRepr = PyObject_Repr(member);
-        result << PyString_AsString(memberRepr);
+        result << PyStr_AsString(memberRepr);
         Py_XDECREF(memberRepr);
         Py_XDECREF(member);
       
@@ -667,7 +729,7 @@ namespace {
         result << "zlib_data=";
         member = Blob_getzlib_data(self, NULL);
         memberRepr = PyObject_Repr(member);
-        result << PyString_AsString(memberRepr);
+        result << PyStr_AsString(memberRepr);
         Py_XDECREF(memberRepr);
         Py_XDECREF(member);
       
@@ -677,7 +739,7 @@ namespace {
         result << "lzma_data=";
         member = Blob_getlzma_data(self, NULL);
         memberRepr = PyObject_Repr(member);
-        result << PyString_AsString(memberRepr);
+        result << PyStr_AsString(memberRepr);
         Py_XDECREF(memberRepr);
         Py_XDECREF(member);
       
@@ -687,7 +749,7 @@ namespace {
         result << "OBSOLETE_bzip2_data=";
         member = Blob_getOBSOLETE_bzip2_data(self, NULL);
         memberRepr = PyObject_Repr(member);
-        result << PyString_AsString(memberRepr);
+        result << PyStr_AsString(memberRepr);
         Py_XDECREF(memberRepr);
         Py_XDECREF(member);
       
@@ -759,8 +821,9 @@ namespace {
 
 
   PyTypeObject BlobType = {
-      PyObject_HEAD_INIT(NULL)
-      0,                                      /*ob_size*/
+      PyVarObject_HEAD_INIT(NULL, 0)
+      //PyObject_HEAD_INIT(NULL)
+      //0,                                      /*ob_size*/
       "OSMPBF.Blob",  /*tp_name*/
       sizeof(Blob),             /*tp_basicsize*/
       0,                                      /*tp_itemsize*/
@@ -819,7 +882,7 @@ namespace {
   BlobHeader_dealloc(BlobHeader* self)
   {
       delete self->protobuf;
-      self->ob_type->tp_free((PyObject*)self);
+      Py_TYPE(self)->tp_free((PyObject*)self);
   }
 
   PyObject *
@@ -852,7 +915,7 @@ namespace {
       Py_BEGIN_ALLOW_THREADS
       self->protobuf->SerializeToString(&result);
       Py_END_ALLOW_THREADS
-      return PyString_FromStringAndSize(result.data(), result.length());
+      return PyStr_FromStringAndSize(result.data(), result.length());
   }
 
 
@@ -878,14 +941,14 @@ namespace {
       Py_XDECREF(sequence);
       delete outputStream;
       delete output;
-      return PyString_FromStringAndSize(result.data(), result.length());
+      return PyStr_FromStringAndSize(result.data(), result.length());
   }
 
 
   PyObject *
   BlobHeader_ParseFromString(BlobHeader* self, PyObject *value)
   {
-      std::string serialized(PyString_AsString(value), PyString_Size(value));
+      std::string serialized(PyStr_AsString(value), PyBytes_Size(value));
       Py_BEGIN_ALLOW_THREADS
       self->protobuf->ParseFromString(serialized);
       Py_END_ALLOW_THREADS
@@ -897,7 +960,7 @@ namespace {
   BlobHeader_ParseFromLongString(BlobHeader* self, PyObject *value)
   {
       google::protobuf::io::ZeroCopyInputStream* input =
-          new google::protobuf::io::ArrayInputStream(PyString_AsString(value), PyString_Size(value));
+          new google::protobuf::io::ArrayInputStream(PyStr_AsString(value), PyBytes_Size(value));
       google::protobuf::io::CodedInputStream* inputStream =
           new google::protobuf::io::CodedInputStream(input);
       inputStream->SetTotalBytesLimit(512 * 1024 * 1024, 512 * 1024 * 1024);
@@ -925,7 +988,7 @@ namespace {
       }
 
       google::protobuf::io::ZeroCopyInputStream* input =
-          new google::protobuf::io::ArrayInputStream(PyString_AsString(value), PyString_Size(value));
+          new google::protobuf::io::ArrayInputStream(PyStr_AsString(value), PyBytes_Size(value));
       google::protobuf::io::CodedInputStream* inputStream =
           new google::protobuf::io::CodedInputStream(input);
       inputStream->SetTotalBytesLimit(512 * 1024 * 1024, 512 * 1024 * 1024);
@@ -1009,12 +1072,12 @@ namespace {
           reallocated = true;
         }
 
-        if (! PyString_Check(value)) {
+        if (! PyStr_Check(value)) {
           PyErr_SetString(PyExc_TypeError, "The type attribute value must be a string");
           return -1;
         }
 
-        std::string protoValue(PyString_AsString(value), PyString_Size(value));
+        std::string protoValue(PyStr_AsString(value), PyBytes_Size(value));
         if (reallocated) {
           Py_XDECREF(value);
         }
@@ -1061,12 +1124,12 @@ namespace {
 
       
         // string
-        if (! PyString_Check(value)) {
+        if (! PyStr_Check(value)) {
           PyErr_SetString(PyExc_TypeError, "The indexdata attribute value must be a string");
           return -1;
         }
 
-        std::string protoValue(PyString_AsString(value), PyString_Size(value));
+        std::string protoValue(PyStr_AsString(value), PyBytes_Size(value));
 
       
 
@@ -1112,11 +1175,10 @@ namespace {
         ::google::protobuf::int32 protoValue;
 
         // int32
-        if (PyInt_Check(value)) {
-          protoValue = PyInt_AsLong(value);
-        } else {
-          PyErr_SetString(PyExc_TypeError,
-                          "The datasize attribute value must be an integer");
+	try {
+	  protoValue = int32_convert(value, "The datasize attribute value must be an integer");
+	}
+	catch (int e) {
           return -1;
         }
 
@@ -1189,7 +1251,7 @@ namespace {
   BlobHeader_richcompare(PyObject *self, PyObject *other, int op)
   {
       PyObject *result = NULL;
-      if (!PyType_IsSubtype(other->ob_type, &BlobHeaderType)) {
+      if (!PyType_IsSubtype(Py_TYPE(other), &BlobHeaderType)) {
           result = Py_NotImplemented;
       } else {
           // This is not a particularly efficient implementation since it never short circuits, but it's better
@@ -1247,7 +1309,7 @@ namespace {
         result << "type=";
         member = BlobHeader_gettype(self, NULL);
         memberRepr = PyObject_Repr(member);
-        result << PyString_AsString(memberRepr);
+        result << PyStr_AsString(memberRepr);
         Py_XDECREF(memberRepr);
         Py_XDECREF(member);
       
@@ -1257,7 +1319,7 @@ namespace {
         result << "indexdata=";
         member = BlobHeader_getindexdata(self, NULL);
         memberRepr = PyObject_Repr(member);
-        result << PyString_AsString(memberRepr);
+        result << PyStr_AsString(memberRepr);
         Py_XDECREF(memberRepr);
         Py_XDECREF(member);
       
@@ -1267,7 +1329,7 @@ namespace {
         result << "datasize=";
         member = BlobHeader_getdatasize(self, NULL);
         memberRepr = PyObject_Repr(member);
-        result << PyString_AsString(memberRepr);
+        result << PyStr_AsString(memberRepr);
         Py_XDECREF(memberRepr);
         Py_XDECREF(member);
       
@@ -1329,8 +1391,9 @@ namespace {
 
 
   PyTypeObject BlobHeaderType = {
-      PyObject_HEAD_INIT(NULL)
-      0,                                      /*ob_size*/
+				 PyVarObject_HEAD_INIT(NULL, 0)
+				 //      PyObject_HEAD_INIT(NULL)
+				 //      0,                                      /*ob_size*/
       "OSMPBF.BlobHeader",  /*tp_name*/
       sizeof(BlobHeader),             /*tp_basicsize*/
       0,                                      /*tp_itemsize*/
@@ -1389,7 +1452,7 @@ namespace {
   ChangeSet_dealloc(ChangeSet* self)
   {
       delete self->protobuf;
-      self->ob_type->tp_free((PyObject*)self);
+      Py_TYPE(self)->tp_free((PyObject*)self);
   }
 
   PyObject *
@@ -1422,7 +1485,7 @@ namespace {
       Py_BEGIN_ALLOW_THREADS
       self->protobuf->SerializeToString(&result);
       Py_END_ALLOW_THREADS
-      return PyString_FromStringAndSize(result.data(), result.length());
+      return PyStr_FromStringAndSize(result.data(), result.length());
   }
 
 
@@ -1448,14 +1511,14 @@ namespace {
       Py_XDECREF(sequence);
       delete outputStream;
       delete output;
-      return PyString_FromStringAndSize(result.data(), result.length());
+      return PyStr_FromStringAndSize(result.data(), result.length());
   }
 
 
   PyObject *
   ChangeSet_ParseFromString(ChangeSet* self, PyObject *value)
   {
-      std::string serialized(PyString_AsString(value), PyString_Size(value));
+      std::string serialized(PyStr_AsString(value), PyBytes_Size(value));
       Py_BEGIN_ALLOW_THREADS
       self->protobuf->ParseFromString(serialized);
       Py_END_ALLOW_THREADS
@@ -1467,7 +1530,7 @@ namespace {
   ChangeSet_ParseFromLongString(ChangeSet* self, PyObject *value)
   {
       google::protobuf::io::ZeroCopyInputStream* input =
-          new google::protobuf::io::ArrayInputStream(PyString_AsString(value), PyString_Size(value));
+          new google::protobuf::io::ArrayInputStream(PyStr_AsString(value), PyBytes_Size(value));
       google::protobuf::io::CodedInputStream* inputStream =
           new google::protobuf::io::CodedInputStream(input);
       inputStream->SetTotalBytesLimit(512 * 1024 * 1024, 512 * 1024 * 1024);
@@ -1495,7 +1558,7 @@ namespace {
       }
 
       google::protobuf::io::ZeroCopyInputStream* input =
-          new google::protobuf::io::ArrayInputStream(PyString_AsString(value), PyString_Size(value));
+          new google::protobuf::io::ArrayInputStream(PyStr_AsString(value), PyBytes_Size(value));
       google::protobuf::io::CodedInputStream* inputStream =
           new google::protobuf::io::CodedInputStream(input);
       inputStream->SetTotalBytesLimit(512 * 1024 * 1024, 512 * 1024 * 1024);
@@ -1575,16 +1638,13 @@ namespace {
         ::google::protobuf::int64 protoValue;
 
         // int64
-        if (PyInt_Check(value)) {
-          protoValue = PyInt_AsLong(value);
-        } else if (PyLong_Check(value)) {
-          protoValue = PyLong_AsLongLong(value);
-        } else {
-          PyErr_SetString(PyExc_TypeError,
-                          "The id attribute value must be an integer");
+	try {
+	  protoValue = int64_convert(value, "The id attribute value must be an integer");
+	}
+	catch (int e) {
           return -1;
         }
-
+	
       
 
       
@@ -1634,7 +1694,7 @@ namespace {
   ChangeSet_richcompare(PyObject *self, PyObject *other, int op)
   {
       PyObject *result = NULL;
-      if (!PyType_IsSubtype(other->ob_type, &ChangeSetType)) {
+      if (!PyType_IsSubtype(Py_TYPE(other), &ChangeSetType)) {
           result = Py_NotImplemented;
       } else {
           // This is not a particularly efficient implementation since it never short circuits, but it's better
@@ -1692,7 +1752,7 @@ namespace {
         result << "id=";
         member = ChangeSet_getid(self, NULL);
         memberRepr = PyObject_Repr(member);
-        result << PyString_AsString(memberRepr);
+        result << PyStr_AsString(memberRepr);
         Py_XDECREF(memberRepr);
         Py_XDECREF(member);
       
@@ -1744,8 +1804,9 @@ namespace {
 
 
   PyTypeObject ChangeSetType = {
-      PyObject_HEAD_INIT(NULL)
-      0,                                      /*ob_size*/
+				 PyVarObject_HEAD_INIT(NULL, 0)
+				 //      PyObject_HEAD_INIT(NULL)
+				 //      0,                                      /*ob_size*/
       "OSMPBF.ChangeSet",  /*tp_name*/
       sizeof(ChangeSet),             /*tp_basicsize*/
       0,                                      /*tp_itemsize*/
@@ -1804,7 +1865,7 @@ namespace {
   DenseInfo_dealloc(DenseInfo* self)
   {
       delete self->protobuf;
-      self->ob_type->tp_free((PyObject*)self);
+      Py_TYPE(self)->tp_free((PyObject*)self);
   }
 
   PyObject *
@@ -1837,7 +1898,7 @@ namespace {
       Py_BEGIN_ALLOW_THREADS
       self->protobuf->SerializeToString(&result);
       Py_END_ALLOW_THREADS
-      return PyString_FromStringAndSize(result.data(), result.length());
+      return PyStr_FromStringAndSize(result.data(), result.length());
   }
 
 
@@ -1863,14 +1924,14 @@ namespace {
       Py_XDECREF(sequence);
       delete outputStream;
       delete output;
-      return PyString_FromStringAndSize(result.data(), result.length());
+      return PyStr_FromStringAndSize(result.data(), result.length());
   }
 
 
   PyObject *
   DenseInfo_ParseFromString(DenseInfo* self, PyObject *value)
   {
-      std::string serialized(PyString_AsString(value), PyString_Size(value));
+      std::string serialized(PyStr_AsString(value), PyBytes_Size(value));
       Py_BEGIN_ALLOW_THREADS
       self->protobuf->ParseFromString(serialized);
       Py_END_ALLOW_THREADS
@@ -1882,7 +1943,7 @@ namespace {
   DenseInfo_ParseFromLongString(DenseInfo* self, PyObject *value)
   {
       google::protobuf::io::ZeroCopyInputStream* input =
-          new google::protobuf::io::ArrayInputStream(PyString_AsString(value), PyString_Size(value));
+          new google::protobuf::io::ArrayInputStream(PyStr_AsString(value), PyBytes_Size(value));
       google::protobuf::io::CodedInputStream* inputStream =
           new google::protobuf::io::CodedInputStream(input);
       inputStream->SetTotalBytesLimit(512 * 1024 * 1024, 512 * 1024 * 1024);
@@ -1910,7 +1971,7 @@ namespace {
       }
 
       google::protobuf::io::ZeroCopyInputStream* input =
-          new google::protobuf::io::ArrayInputStream(PyString_AsString(value), PyString_Size(value));
+          new google::protobuf::io::ArrayInputStream(PyStr_AsString(value), PyBytes_Size(value));
       google::protobuf::io::CodedInputStream* inputStream =
           new google::protobuf::io::CodedInputStream(input);
       inputStream->SetTotalBytesLimit(512 * 1024 * 1024, 512 * 1024 * 1024);
@@ -1988,7 +2049,7 @@ namespace {
       }
 
       
-        if (PyString_Check(input)) {
+        if (PyStr_Check(input)) {
           PyErr_SetString(PyExc_TypeError, "The version attribute value must be a sequence");
           return -1;
         }
@@ -2003,13 +2064,12 @@ namespace {
         ::google::protobuf::int32 protoValue;
 
         // int32
-        if (PyInt_Check(value)) {
-          protoValue = PyInt_AsLong(value);
-        } else {
-          PyErr_SetString(PyExc_TypeError,
-                          "The version attribute value must be an integer");
-          return -1;
-        }
+	  try {
+	    protoValue = int32_convert(value, "The version attribute value must be an integer");
+	  }
+	  catch (int e) {
+	    return -1;
+	  }
 
       
 
@@ -2056,7 +2116,7 @@ namespace {
       }
 
       
-        if (PyString_Check(input)) {
+        if (PyStr_Check(input)) {
           PyErr_SetString(PyExc_TypeError, "The timestamp attribute value must be a sequence");
           return -1;
         }
@@ -2071,15 +2131,12 @@ namespace {
         ::google::protobuf::int64 protoValue;
 
         // int64
-        if (PyInt_Check(value)) {
-          protoValue = PyInt_AsLong(value);
-        } else if (PyLong_Check(value)) {
-          protoValue = PyLong_AsLongLong(value);
-        } else {
-          PyErr_SetString(PyExc_TypeError,
-                          "The timestamp attribute value must be an integer");
-          return -1;
-        }
+	  try {
+	    protoValue = int64_convert(value, "The timestamp attribute value must be an integer");
+	  }
+	  catch (int e) {
+	    return -1;
+	  }
 
       
 
@@ -2126,7 +2183,7 @@ namespace {
       }
 
       
-        if (PyString_Check(input)) {
+        if (PyStr_Check(input)) {
           PyErr_SetString(PyExc_TypeError, "The changeset attribute value must be a sequence");
           return -1;
         }
@@ -2141,15 +2198,12 @@ namespace {
         ::google::protobuf::int64 protoValue;
 
         // int64
-        if (PyInt_Check(value)) {
-          protoValue = PyInt_AsLong(value);
-        } else if (PyLong_Check(value)) {
-          protoValue = PyLong_AsLongLong(value);
-        } else {
-          PyErr_SetString(PyExc_TypeError,
-                          "The changeset attribute value must be an integer");
-          return -1;
-        }
+	  try {
+	    protoValue = int64_convert(value, "The changeset attribute value must be an integer");
+	  }
+	  catch (int e) {
+	    return -1;
+	  }
 
       
 
@@ -2196,7 +2250,7 @@ namespace {
       }
 
       
-        if (PyString_Check(input)) {
+        if (PyStr_Check(input)) {
           PyErr_SetString(PyExc_TypeError, "The uid attribute value must be a sequence");
           return -1;
         }
@@ -2211,13 +2265,12 @@ namespace {
         ::google::protobuf::int32 protoValue;
 
         // int32
-        if (PyInt_Check(value)) {
-          protoValue = PyInt_AsLong(value);
-        } else {
-          PyErr_SetString(PyExc_TypeError,
-                          "The uid attribute value must be an integer");
-          return -1;
-        }
+	  try {
+	    protoValue = int32_convert(value, "The uid attribute value must be an integer");
+	  }
+	  catch (int e) {
+	    return -1;
+	  }
 
       
 
@@ -2264,7 +2317,7 @@ namespace {
       }
 
       
-        if (PyString_Check(input)) {
+        if (PyStr_Check(input)) {
           PyErr_SetString(PyExc_TypeError, "The user_sid attribute value must be a sequence");
           return -1;
         }
@@ -2279,13 +2332,12 @@ namespace {
         ::google::protobuf::int32 protoValue;
 
         // int32
-        if (PyInt_Check(value)) {
-          protoValue = PyInt_AsLong(value);
-        } else {
-          PyErr_SetString(PyExc_TypeError,
-                          "The user_sid attribute value must be an integer");
-          return -1;
-        }
+	  try {
+	    protoValue = int32_convert(value, "The user_sid attribute value must be an integer");
+	  }
+	  catch (int e) {
+	    return -1;
+	  }
 
       
 
@@ -2379,7 +2431,7 @@ namespace {
   DenseInfo_richcompare(PyObject *self, PyObject *other, int op)
   {
       PyObject *result = NULL;
-      if (!PyType_IsSubtype(other->ob_type, &DenseInfoType)) {
+      if (!PyType_IsSubtype(Py_TYPE(other), &DenseInfoType)) {
           result = Py_NotImplemented;
       } else {
           // This is not a particularly efficient implementation since it never short circuits, but it's better
@@ -2437,7 +2489,7 @@ namespace {
         result << "version=";
         member = DenseInfo_getversion(self, NULL);
         memberRepr = PyObject_Repr(member);
-        result << PyString_AsString(memberRepr);
+        result << PyStr_AsString(memberRepr);
         Py_XDECREF(memberRepr);
         Py_XDECREF(member);
       
@@ -2447,7 +2499,7 @@ namespace {
         result << "timestamp=";
         member = DenseInfo_gettimestamp(self, NULL);
         memberRepr = PyObject_Repr(member);
-        result << PyString_AsString(memberRepr);
+        result << PyStr_AsString(memberRepr);
         Py_XDECREF(memberRepr);
         Py_XDECREF(member);
       
@@ -2457,7 +2509,7 @@ namespace {
         result << "changeset=";
         member = DenseInfo_getchangeset(self, NULL);
         memberRepr = PyObject_Repr(member);
-        result << PyString_AsString(memberRepr);
+        result << PyStr_AsString(memberRepr);
         Py_XDECREF(memberRepr);
         Py_XDECREF(member);
       
@@ -2467,7 +2519,7 @@ namespace {
         result << "uid=";
         member = DenseInfo_getuid(self, NULL);
         memberRepr = PyObject_Repr(member);
-        result << PyString_AsString(memberRepr);
+        result << PyStr_AsString(memberRepr);
         Py_XDECREF(memberRepr);
         Py_XDECREF(member);
       
@@ -2477,7 +2529,7 @@ namespace {
         result << "user_sid=";
         member = DenseInfo_getuser_sid(self, NULL);
         memberRepr = PyObject_Repr(member);
-        result << PyString_AsString(memberRepr);
+        result << PyStr_AsString(memberRepr);
         Py_XDECREF(memberRepr);
         Py_XDECREF(member);
       
@@ -2549,8 +2601,9 @@ namespace {
 
 
   PyTypeObject DenseInfoType = {
-      PyObject_HEAD_INIT(NULL)
-      0,                                      /*ob_size*/
+				 PyVarObject_HEAD_INIT(NULL, 0)
+				 //      PyObject_HEAD_INIT(NULL)
+				 //      0,                                      /*ob_size*/
       "OSMPBF.DenseInfo",  /*tp_name*/
       sizeof(DenseInfo),             /*tp_basicsize*/
       0,                                      /*tp_itemsize*/
@@ -2609,7 +2662,7 @@ namespace {
   HeaderBBox_dealloc(HeaderBBox* self)
   {
       delete self->protobuf;
-      self->ob_type->tp_free((PyObject*)self);
+      Py_TYPE(self)->tp_free((PyObject*)self);
   }
 
   PyObject *
@@ -2642,7 +2695,7 @@ namespace {
       Py_BEGIN_ALLOW_THREADS
       self->protobuf->SerializeToString(&result);
       Py_END_ALLOW_THREADS
-      return PyString_FromStringAndSize(result.data(), result.length());
+      return PyStr_FromStringAndSize(result.data(), result.length());
   }
 
 
@@ -2668,14 +2721,14 @@ namespace {
       Py_XDECREF(sequence);
       delete outputStream;
       delete output;
-      return PyString_FromStringAndSize(result.data(), result.length());
+      return PyStr_FromStringAndSize(result.data(), result.length());
   }
 
 
   PyObject *
   HeaderBBox_ParseFromString(HeaderBBox* self, PyObject *value)
   {
-      std::string serialized(PyString_AsString(value), PyString_Size(value));
+      std::string serialized(PyStr_AsString(value), PyBytes_Size(value));
       Py_BEGIN_ALLOW_THREADS
       self->protobuf->ParseFromString(serialized);
       Py_END_ALLOW_THREADS
@@ -2687,7 +2740,7 @@ namespace {
   HeaderBBox_ParseFromLongString(HeaderBBox* self, PyObject *value)
   {
       google::protobuf::io::ZeroCopyInputStream* input =
-          new google::protobuf::io::ArrayInputStream(PyString_AsString(value), PyString_Size(value));
+          new google::protobuf::io::ArrayInputStream(PyStr_AsString(value), PyBytes_Size(value));
       google::protobuf::io::CodedInputStream* inputStream =
           new google::protobuf::io::CodedInputStream(input);
       inputStream->SetTotalBytesLimit(512 * 1024 * 1024, 512 * 1024 * 1024);
@@ -2715,7 +2768,7 @@ namespace {
       }
 
       google::protobuf::io::ZeroCopyInputStream* input =
-          new google::protobuf::io::ArrayInputStream(PyString_AsString(value), PyString_Size(value));
+          new google::protobuf::io::ArrayInputStream(PyStr_AsString(value), PyBytes_Size(value));
       google::protobuf::io::CodedInputStream* inputStream =
           new google::protobuf::io::CodedInputStream(input);
       inputStream->SetTotalBytesLimit(512 * 1024 * 1024, 512 * 1024 * 1024);
@@ -2795,13 +2848,10 @@ namespace {
         ::google::protobuf::int64 protoValue;
 
         // int64
-        if (PyInt_Check(value)) {
-          protoValue = PyInt_AsLong(value);
-        } else if (PyLong_Check(value)) {
-          protoValue = PyLong_AsLongLong(value);
-        } else {
-          PyErr_SetString(PyExc_TypeError,
-                          "The left attribute value must be an integer");
+	try {
+	  protoValue = int64_convert(value, "The left attribute value must be an integer");
+	}
+	catch (int e) {
           return -1;
         }
 
@@ -2849,13 +2899,10 @@ namespace {
         ::google::protobuf::int64 protoValue;
 
         // int64
-        if (PyInt_Check(value)) {
-          protoValue = PyInt_AsLong(value);
-        } else if (PyLong_Check(value)) {
-          protoValue = PyLong_AsLongLong(value);
-        } else {
-          PyErr_SetString(PyExc_TypeError,
-                          "The right attribute value must be an integer");
+	try{
+	  protoValue = int64_convert(value, "The right attribute value must be an integer");
+	}
+	catch (int e) {
           return -1;
         }
 
@@ -2903,13 +2950,10 @@ namespace {
         ::google::protobuf::int64 protoValue;
 
         // int64
-        if (PyInt_Check(value)) {
-          protoValue = PyInt_AsLong(value);
-        } else if (PyLong_Check(value)) {
-          protoValue = PyLong_AsLongLong(value);
-        } else {
-          PyErr_SetString(PyExc_TypeError,
-                          "The top attribute value must be an integer");
+	try {
+	  protoValue = int64_convert(value, "The top attribute value must be an integer");
+	}
+	catch (int e) {
           return -1;
         }
 
@@ -2957,13 +3001,10 @@ namespace {
         ::google::protobuf::int64 protoValue;
 
         // int64
-        if (PyInt_Check(value)) {
-          protoValue = PyInt_AsLong(value);
-        } else if (PyLong_Check(value)) {
-          protoValue = PyLong_AsLongLong(value);
-        } else {
-          PyErr_SetString(PyExc_TypeError,
-                          "The bottom attribute value must be an integer");
+	try {
+	  protoValue = int64_convert(value, "The bottom attribute value must be an integer");
+	}
+	catch (int e) {
           return -1;
         }
 
@@ -3046,7 +3087,7 @@ namespace {
   HeaderBBox_richcompare(PyObject *self, PyObject *other, int op)
   {
       PyObject *result = NULL;
-      if (!PyType_IsSubtype(other->ob_type, &HeaderBBoxType)) {
+      if (!PyType_IsSubtype(Py_TYPE(other), &HeaderBBoxType)) {
           result = Py_NotImplemented;
       } else {
           // This is not a particularly efficient implementation since it never short circuits, but it's better
@@ -3104,7 +3145,7 @@ namespace {
         result << "left=";
         member = HeaderBBox_getleft(self, NULL);
         memberRepr = PyObject_Repr(member);
-        result << PyString_AsString(memberRepr);
+        result << PyStr_AsString(memberRepr);
         Py_XDECREF(memberRepr);
         Py_XDECREF(member);
       
@@ -3114,7 +3155,7 @@ namespace {
         result << "right=";
         member = HeaderBBox_getright(self, NULL);
         memberRepr = PyObject_Repr(member);
-        result << PyString_AsString(memberRepr);
+        result << PyStr_AsString(memberRepr);
         Py_XDECREF(memberRepr);
         Py_XDECREF(member);
       
@@ -3124,7 +3165,7 @@ namespace {
         result << "top=";
         member = HeaderBBox_gettop(self, NULL);
         memberRepr = PyObject_Repr(member);
-        result << PyString_AsString(memberRepr);
+        result << PyStr_AsString(memberRepr);
         Py_XDECREF(memberRepr);
         Py_XDECREF(member);
       
@@ -3134,7 +3175,7 @@ namespace {
         result << "bottom=";
         member = HeaderBBox_getbottom(self, NULL);
         memberRepr = PyObject_Repr(member);
-        result << PyString_AsString(memberRepr);
+        result << PyStr_AsString(memberRepr);
         Py_XDECREF(memberRepr);
         Py_XDECREF(member);
       
@@ -3201,8 +3242,9 @@ namespace {
 
 
   PyTypeObject HeaderBBoxType = {
-      PyObject_HEAD_INIT(NULL)
-      0,                                      /*ob_size*/
+				 PyVarObject_HEAD_INIT(NULL, 0)
+				 //      PyObject_HEAD_INIT(NULL)
+				 //      0,                                      /*ob_size*/
       "OSMPBF.HeaderBBox",  /*tp_name*/
       sizeof(HeaderBBox),             /*tp_basicsize*/
       0,                                      /*tp_itemsize*/
@@ -3261,7 +3303,7 @@ namespace {
   Info_dealloc(Info* self)
   {
       delete self->protobuf;
-      self->ob_type->tp_free((PyObject*)self);
+      Py_TYPE(self)->tp_free((PyObject*)self);
   }
 
   PyObject *
@@ -3294,7 +3336,7 @@ namespace {
       Py_BEGIN_ALLOW_THREADS
       self->protobuf->SerializeToString(&result);
       Py_END_ALLOW_THREADS
-      return PyString_FromStringAndSize(result.data(), result.length());
+      return PyStr_FromStringAndSize(result.data(), result.length());
   }
 
 
@@ -3320,14 +3362,14 @@ namespace {
       Py_XDECREF(sequence);
       delete outputStream;
       delete output;
-      return PyString_FromStringAndSize(result.data(), result.length());
+      return PyStr_FromStringAndSize(result.data(), result.length());
   }
 
 
   PyObject *
   Info_ParseFromString(Info* self, PyObject *value)
   {
-      std::string serialized(PyString_AsString(value), PyString_Size(value));
+      std::string serialized(PyStr_AsString(value), PyBytes_Size(value));
       Py_BEGIN_ALLOW_THREADS
       self->protobuf->ParseFromString(serialized);
       Py_END_ALLOW_THREADS
@@ -3339,7 +3381,7 @@ namespace {
   Info_ParseFromLongString(Info* self, PyObject *value)
   {
       google::protobuf::io::ZeroCopyInputStream* input =
-          new google::protobuf::io::ArrayInputStream(PyString_AsString(value), PyString_Size(value));
+          new google::protobuf::io::ArrayInputStream(PyStr_AsString(value), PyBytes_Size(value));
       google::protobuf::io::CodedInputStream* inputStream =
           new google::protobuf::io::CodedInputStream(input);
       inputStream->SetTotalBytesLimit(512 * 1024 * 1024, 512 * 1024 * 1024);
@@ -3367,7 +3409,7 @@ namespace {
       }
 
       google::protobuf::io::ZeroCopyInputStream* input =
-          new google::protobuf::io::ArrayInputStream(PyString_AsString(value), PyString_Size(value));
+          new google::protobuf::io::ArrayInputStream(PyStr_AsString(value), PyBytes_Size(value));
       google::protobuf::io::CodedInputStream* inputStream =
           new google::protobuf::io::CodedInputStream(input);
       inputStream->SetTotalBytesLimit(512 * 1024 * 1024, 512 * 1024 * 1024);
@@ -3447,11 +3489,10 @@ namespace {
         ::google::protobuf::int32 protoValue;
 
         // int32
-        if (PyInt_Check(value)) {
-          protoValue = PyInt_AsLong(value);
-        } else {
-          PyErr_SetString(PyExc_TypeError,
-                          "The version attribute value must be an integer");
+	try {
+	  protoValue = int32_convert(value, "The version attribute value must be an integer");
+	}
+	catch (int e) {
           return -1;
         }
 
@@ -3499,13 +3540,10 @@ namespace {
         ::google::protobuf::int64 protoValue;
 
         // int64
-        if (PyInt_Check(value)) {
-          protoValue = PyInt_AsLong(value);
-        } else if (PyLong_Check(value)) {
-          protoValue = PyLong_AsLongLong(value);
-        } else {
-          PyErr_SetString(PyExc_TypeError,
-                          "The timestamp attribute value must be an integer");
+	try {
+	  protoValue = int64_convert(value, "The timestamp attribute value must be an integer");
+	}
+	catch (int e) {
           return -1;
         }
 
@@ -3553,13 +3591,10 @@ namespace {
         ::google::protobuf::int64 protoValue;
 
         // int64
-        if (PyInt_Check(value)) {
-          protoValue = PyInt_AsLong(value);
-        } else if (PyLong_Check(value)) {
-          protoValue = PyLong_AsLongLong(value);
-        } else {
-          PyErr_SetString(PyExc_TypeError,
-                          "The changeset attribute value must be an integer");
+	try {
+	  protoValue = int64_convert(value, "The changeset attribute value must be an integer");
+	}
+	catch (int e) {
           return -1;
         }
 
@@ -3607,11 +3642,10 @@ namespace {
         ::google::protobuf::int32 protoValue;
 
         // int32
-        if (PyInt_Check(value)) {
-          protoValue = PyInt_AsLong(value);
-        } else {
-          PyErr_SetString(PyExc_TypeError,
-                          "The uid attribute value must be an integer");
+	try {
+	  protoValue = int32_convert(value, "The uid attribute value must be an integer");
+	}
+	catch (int e) {
           return -1;
         }
 
@@ -3661,13 +3695,11 @@ namespace {
         
 
         // uint32
-        if (PyInt_Check(value)) {
-          protoValue = PyInt_AsUnsignedLongMask(value);
-        } else if (PyLong_Check(value)) {
-          protoValue = PyLong_AsUnsignedLong(value);
-        } else {
-          PyErr_SetString(PyExc_TypeError,
-                          "The user_sid attribute value must be an integer");
+
+	try {
+	  protoValue = uint32_convert(value, "The user_sid attribute value must be an integer");
+	}
+	catch (int e) {
           return -1;
         }
 
@@ -3760,7 +3792,7 @@ namespace {
   Info_richcompare(PyObject *self, PyObject *other, int op)
   {
       PyObject *result = NULL;
-      if (!PyType_IsSubtype(other->ob_type, &InfoType)) {
+      if (!PyType_IsSubtype(Py_TYPE(other), &InfoType)) {
           result = Py_NotImplemented;
       } else {
           // This is not a particularly efficient implementation since it never short circuits, but it's better
@@ -3818,7 +3850,7 @@ namespace {
         result << "version=";
         member = Info_getversion(self, NULL);
         memberRepr = PyObject_Repr(member);
-        result << PyString_AsString(memberRepr);
+        result << PyStr_AsString(memberRepr);
         Py_XDECREF(memberRepr);
         Py_XDECREF(member);
       
@@ -3828,7 +3860,7 @@ namespace {
         result << "timestamp=";
         member = Info_gettimestamp(self, NULL);
         memberRepr = PyObject_Repr(member);
-        result << PyString_AsString(memberRepr);
+        result << PyStr_AsString(memberRepr);
         Py_XDECREF(memberRepr);
         Py_XDECREF(member);
       
@@ -3838,7 +3870,7 @@ namespace {
         result << "changeset=";
         member = Info_getchangeset(self, NULL);
         memberRepr = PyObject_Repr(member);
-        result << PyString_AsString(memberRepr);
+        result << PyStr_AsString(memberRepr);
         Py_XDECREF(memberRepr);
         Py_XDECREF(member);
       
@@ -3848,7 +3880,7 @@ namespace {
         result << "uid=";
         member = Info_getuid(self, NULL);
         memberRepr = PyObject_Repr(member);
-        result << PyString_AsString(memberRepr);
+        result << PyStr_AsString(memberRepr);
         Py_XDECREF(memberRepr);
         Py_XDECREF(member);
       
@@ -3858,7 +3890,7 @@ namespace {
         result << "user_sid=";
         member = Info_getuser_sid(self, NULL);
         memberRepr = PyObject_Repr(member);
-        result << PyString_AsString(memberRepr);
+        result << PyStr_AsString(memberRepr);
         Py_XDECREF(memberRepr);
         Py_XDECREF(member);
       
@@ -3930,8 +3962,9 @@ namespace {
 
 
   PyTypeObject InfoType = {
-      PyObject_HEAD_INIT(NULL)
-      0,                                      /*ob_size*/
+				 PyVarObject_HEAD_INIT(NULL, 0)
+				 //      PyObject_HEAD_INIT(NULL)
+				 //      0,                                      /*ob_size*/
       "OSMPBF.Info",  /*tp_name*/
       sizeof(Info),             /*tp_basicsize*/
       0,                                      /*tp_itemsize*/
@@ -3990,7 +4023,7 @@ namespace {
   StringTable_dealloc(StringTable* self)
   {
       delete self->protobuf;
-      self->ob_type->tp_free((PyObject*)self);
+      Py_TYPE(self)->tp_free((PyObject*)self);
   }
 
   PyObject *
@@ -4023,7 +4056,7 @@ namespace {
       Py_BEGIN_ALLOW_THREADS
       self->protobuf->SerializeToString(&result);
       Py_END_ALLOW_THREADS
-      return PyString_FromStringAndSize(result.data(), result.length());
+      return PyStr_FromStringAndSize(result.data(), result.length());
   }
 
 
@@ -4049,14 +4082,14 @@ namespace {
       Py_XDECREF(sequence);
       delete outputStream;
       delete output;
-      return PyString_FromStringAndSize(result.data(), result.length());
+      return PyStr_FromStringAndSize(result.data(), result.length());
   }
 
 
   PyObject *
   StringTable_ParseFromString(StringTable* self, PyObject *value)
   {
-      std::string serialized(PyString_AsString(value), PyString_Size(value));
+      std::string serialized(PyStr_AsString(value), PyBytes_Size(value));
       Py_BEGIN_ALLOW_THREADS
       self->protobuf->ParseFromString(serialized);
       Py_END_ALLOW_THREADS
@@ -4068,7 +4101,7 @@ namespace {
   StringTable_ParseFromLongString(StringTable* self, PyObject *value)
   {
       google::protobuf::io::ZeroCopyInputStream* input =
-          new google::protobuf::io::ArrayInputStream(PyString_AsString(value), PyString_Size(value));
+          new google::protobuf::io::ArrayInputStream(PyStr_AsString(value), PyBytes_Size(value));
       google::protobuf::io::CodedInputStream* inputStream =
           new google::protobuf::io::CodedInputStream(input);
       inputStream->SetTotalBytesLimit(512 * 1024 * 1024, 512 * 1024 * 1024);
@@ -4096,7 +4129,7 @@ namespace {
       }
 
       google::protobuf::io::ZeroCopyInputStream* input =
-          new google::protobuf::io::ArrayInputStream(PyString_AsString(value), PyString_Size(value));
+          new google::protobuf::io::ArrayInputStream(PyStr_AsString(value), PyBytes_Size(value));
       google::protobuf::io::CodedInputStream* inputStream =
           new google::protobuf::io::CodedInputStream(input);
       inputStream->SetTotalBytesLimit(512 * 1024 * 1024, 512 * 1024 * 1024);
@@ -4174,7 +4207,7 @@ namespace {
       }
 
       
-        if (PyString_Check(input)) {
+        if (PyStr_Check(input)) {
           PyErr_SetString(PyExc_TypeError, "The s attribute value must be a sequence");
           return -1;
         }
@@ -4187,12 +4220,12 @@ namespace {
 
       
         // string
-        if (! PyString_Check(value)) {
+        if (! PyStr_Check(value)) {
           PyErr_SetString(PyExc_TypeError, "The s attribute value must be a string");
           return -1;
         }
 
-        std::string protoValue(PyString_AsString(value), PyString_Size(value));
+        std::string protoValue(PyStr_AsString(value), PyBytes_Size(value));
 
       
 
@@ -4246,7 +4279,7 @@ namespace {
   StringTable_richcompare(PyObject *self, PyObject *other, int op)
   {
       PyObject *result = NULL;
-      if (!PyType_IsSubtype(other->ob_type, &StringTableType)) {
+      if (!PyType_IsSubtype(Py_TYPE(other), &StringTableType)) {
           result = Py_NotImplemented;
       } else {
           // This is not a particularly efficient implementation since it never short circuits, but it's better
@@ -4304,7 +4337,7 @@ namespace {
         result << "s=";
         member = StringTable_gets(self, NULL);
         memberRepr = PyObject_Repr(member);
-        result << PyString_AsString(memberRepr);
+        result << PyStr_AsString(memberRepr);
         Py_XDECREF(memberRepr);
         Py_XDECREF(member);
       
@@ -4356,8 +4389,9 @@ namespace {
 
 
   PyTypeObject StringTableType = {
-      PyObject_HEAD_INIT(NULL)
-      0,                                      /*ob_size*/
+				 PyVarObject_HEAD_INIT(NULL, 0)
+				 //      PyObject_HEAD_INIT(NULL)
+				 //      0,                                      /*ob_size*/
       "OSMPBF.StringTable",  /*tp_name*/
       sizeof(StringTable),             /*tp_basicsize*/
       0,                                      /*tp_itemsize*/
@@ -4416,7 +4450,7 @@ namespace {
   DenseNodes_dealloc(DenseNodes* self)
   {
       delete self->protobuf;
-      self->ob_type->tp_free((PyObject*)self);
+      Py_TYPE(self)->tp_free((PyObject*)self);
   }
 
   PyObject *
@@ -4449,7 +4483,7 @@ namespace {
       Py_BEGIN_ALLOW_THREADS
       self->protobuf->SerializeToString(&result);
       Py_END_ALLOW_THREADS
-      return PyString_FromStringAndSize(result.data(), result.length());
+      return PyStr_FromStringAndSize(result.data(), result.length());
   }
 
 
@@ -4475,14 +4509,14 @@ namespace {
       Py_XDECREF(sequence);
       delete outputStream;
       delete output;
-      return PyString_FromStringAndSize(result.data(), result.length());
+      return PyStr_FromStringAndSize(result.data(), result.length());
   }
 
 
   PyObject *
   DenseNodes_ParseFromString(DenseNodes* self, PyObject *value)
   {
-      std::string serialized(PyString_AsString(value), PyString_Size(value));
+      std::string serialized(PyStr_AsString(value), PyBytes_Size(value));
       Py_BEGIN_ALLOW_THREADS
       self->protobuf->ParseFromString(serialized);
       Py_END_ALLOW_THREADS
@@ -4494,7 +4528,7 @@ namespace {
   DenseNodes_ParseFromLongString(DenseNodes* self, PyObject *value)
   {
       google::protobuf::io::ZeroCopyInputStream* input =
-          new google::protobuf::io::ArrayInputStream(PyString_AsString(value), PyString_Size(value));
+          new google::protobuf::io::ArrayInputStream(PyStr_AsString(value), PyBytes_Size(value));
       google::protobuf::io::CodedInputStream* inputStream =
           new google::protobuf::io::CodedInputStream(input);
       inputStream->SetTotalBytesLimit(512 * 1024 * 1024, 512 * 1024 * 1024);
@@ -4522,7 +4556,7 @@ namespace {
       }
 
       google::protobuf::io::ZeroCopyInputStream* input =
-          new google::protobuf::io::ArrayInputStream(PyString_AsString(value), PyString_Size(value));
+          new google::protobuf::io::ArrayInputStream(PyStr_AsString(value), PyBytes_Size(value));
       google::protobuf::io::CodedInputStream* inputStream =
           new google::protobuf::io::CodedInputStream(input);
       inputStream->SetTotalBytesLimit(512 * 1024 * 1024, 512 * 1024 * 1024);
@@ -4600,7 +4634,7 @@ namespace {
       }
 
       
-        if (PyString_Check(input)) {
+        if (PyStr_Check(input)) {
           PyErr_SetString(PyExc_TypeError, "The id attribute value must be a sequence");
           return -1;
         }
@@ -4615,15 +4649,12 @@ namespace {
         ::google::protobuf::int64 protoValue;
 
         // int64
-        if (PyInt_Check(value)) {
-          protoValue = PyInt_AsLong(value);
-        } else if (PyLong_Check(value)) {
-          protoValue = PyLong_AsLongLong(value);
-        } else {
-          PyErr_SetString(PyExc_TypeError,
-                          "The id attribute value must be an integer");
-          return -1;
-        }
+	  try {
+	    protoValue = int64_convert(value, "The id attribute value must be an integer");
+	  }
+	  catch (int e) {
+	    return -1;
+	  }
 
       
 
@@ -4679,7 +4710,7 @@ namespace {
 
       
 
-        if (!PyType_IsSubtype(value->ob_type, &DenseInfoType)) {
+        if (!PyType_IsSubtype(Py_TYPE(value), &DenseInfoType)) {
           PyErr_SetString(PyExc_TypeError,
                           "The denseinfo attribute value must be an instance of DenseInfo");
           return -1;
@@ -4732,7 +4763,7 @@ namespace {
       }
 
       
-        if (PyString_Check(input)) {
+        if (PyStr_Check(input)) {
           PyErr_SetString(PyExc_TypeError, "The lat attribute value must be a sequence");
           return -1;
         }
@@ -4747,15 +4778,12 @@ namespace {
         ::google::protobuf::int64 protoValue;
 
         // int64
-        if (PyInt_Check(value)) {
-          protoValue = PyInt_AsLong(value);
-        } else if (PyLong_Check(value)) {
-          protoValue = PyLong_AsLongLong(value);
-        } else {
-          PyErr_SetString(PyExc_TypeError,
-                          "The lat attribute value must be an integer");
-          return -1;
-        }
+	  try {
+	    protoValue = int64_convert(value, "The lat attribute value must be an integer");
+	  }
+	  catch (int e) {
+	    return -1;
+	  }
 
       
 
@@ -4802,7 +4830,7 @@ namespace {
       }
 
       
-        if (PyString_Check(input)) {
+        if (PyStr_Check(input)) {
           PyErr_SetString(PyExc_TypeError, "The lon attribute value must be a sequence");
           return -1;
         }
@@ -4817,15 +4845,12 @@ namespace {
         ::google::protobuf::int64 protoValue;
 
         // int64
-        if (PyInt_Check(value)) {
-          protoValue = PyInt_AsLong(value);
-        } else if (PyLong_Check(value)) {
-          protoValue = PyLong_AsLongLong(value);
-        } else {
-          PyErr_SetString(PyExc_TypeError,
-                          "The lon attribute value must be an integer");
-          return -1;
-        }
+	  try {
+	    protoValue = int64_convert(value, "The lon attribute value must be an integer");
+	  }
+	  catch (int e) {
+	    return -1;
+	  }
 
       
 
@@ -4872,7 +4897,7 @@ namespace {
       }
 
       
-        if (PyString_Check(input)) {
+        if (PyStr_Check(input)) {
           PyErr_SetString(PyExc_TypeError, "The keys_vals attribute value must be a sequence");
           return -1;
         }
@@ -4887,13 +4912,12 @@ namespace {
         ::google::protobuf::int32 protoValue;
 
         // int32
-        if (PyInt_Check(value)) {
-          protoValue = PyInt_AsLong(value);
-        } else {
-          PyErr_SetString(PyExc_TypeError,
-                          "The keys_vals attribute value must be an integer");
-          return -1;
-        }
+	  try {
+	    protoValue = int32_convert(value, "The keys_vals attribute value must be an integer");
+	  }
+	  catch (int e) {
+	    return -1;
+	  }
 
       
 
@@ -4987,7 +5011,7 @@ namespace {
   DenseNodes_richcompare(PyObject *self, PyObject *other, int op)
   {
       PyObject *result = NULL;
-      if (!PyType_IsSubtype(other->ob_type, &DenseNodesType)) {
+      if (!PyType_IsSubtype(Py_TYPE(other), &DenseNodesType)) {
           result = Py_NotImplemented;
       } else {
           // This is not a particularly efficient implementation since it never short circuits, but it's better
@@ -5045,7 +5069,7 @@ namespace {
         result << "id=";
         member = DenseNodes_getid(self, NULL);
         memberRepr = PyObject_Repr(member);
-        result << PyString_AsString(memberRepr);
+        result << PyStr_AsString(memberRepr);
         Py_XDECREF(memberRepr);
         Py_XDECREF(member);
       
@@ -5055,7 +5079,7 @@ namespace {
         result << "denseinfo=";
         member = DenseNodes_getdenseinfo(self, NULL);
         memberRepr = PyObject_Repr(member);
-        result << PyString_AsString(memberRepr);
+        result << PyStr_AsString(memberRepr);
         Py_XDECREF(memberRepr);
         Py_XDECREF(member);
       
@@ -5065,7 +5089,7 @@ namespace {
         result << "lat=";
         member = DenseNodes_getlat(self, NULL);
         memberRepr = PyObject_Repr(member);
-        result << PyString_AsString(memberRepr);
+        result << PyStr_AsString(memberRepr);
         Py_XDECREF(memberRepr);
         Py_XDECREF(member);
       
@@ -5075,7 +5099,7 @@ namespace {
         result << "lon=";
         member = DenseNodes_getlon(self, NULL);
         memberRepr = PyObject_Repr(member);
-        result << PyString_AsString(memberRepr);
+        result << PyStr_AsString(memberRepr);
         Py_XDECREF(memberRepr);
         Py_XDECREF(member);
       
@@ -5085,7 +5109,7 @@ namespace {
         result << "keys_vals=";
         member = DenseNodes_getkeys_vals(self, NULL);
         memberRepr = PyObject_Repr(member);
-        result << PyString_AsString(memberRepr);
+        result << PyStr_AsString(memberRepr);
         Py_XDECREF(memberRepr);
         Py_XDECREF(member);
       
@@ -5157,8 +5181,9 @@ namespace {
 
 
   PyTypeObject DenseNodesType = {
-      PyObject_HEAD_INIT(NULL)
-      0,                                      /*ob_size*/
+				 PyVarObject_HEAD_INIT(NULL, 0)
+				 //      PyObject_HEAD_INIT(NULL)
+				 //      0,                                      /*ob_size*/
       "OSMPBF.DenseNodes",  /*tp_name*/
       sizeof(DenseNodes),             /*tp_basicsize*/
       0,                                      /*tp_itemsize*/
@@ -5217,7 +5242,7 @@ namespace {
   HeaderBlock_dealloc(HeaderBlock* self)
   {
       delete self->protobuf;
-      self->ob_type->tp_free((PyObject*)self);
+      Py_TYPE(self)->tp_free((PyObject*)self);
   }
 
   PyObject *
@@ -5250,7 +5275,7 @@ namespace {
       Py_BEGIN_ALLOW_THREADS
       self->protobuf->SerializeToString(&result);
       Py_END_ALLOW_THREADS
-      return PyString_FromStringAndSize(result.data(), result.length());
+      return PyStr_FromStringAndSize(result.data(), result.length());
   }
 
 
@@ -5276,14 +5301,14 @@ namespace {
       Py_XDECREF(sequence);
       delete outputStream;
       delete output;
-      return PyString_FromStringAndSize(result.data(), result.length());
+      return PyStr_FromStringAndSize(result.data(), result.length());
   }
 
 
   PyObject *
   HeaderBlock_ParseFromString(HeaderBlock* self, PyObject *value)
   {
-      std::string serialized(PyString_AsString(value), PyString_Size(value));
+      std::string serialized(PyStr_AsString(value), PyBytes_Size(value));
       Py_BEGIN_ALLOW_THREADS
       self->protobuf->ParseFromString(serialized);
       Py_END_ALLOW_THREADS
@@ -5295,7 +5320,7 @@ namespace {
   HeaderBlock_ParseFromLongString(HeaderBlock* self, PyObject *value)
   {
       google::protobuf::io::ZeroCopyInputStream* input =
-          new google::protobuf::io::ArrayInputStream(PyString_AsString(value), PyString_Size(value));
+          new google::protobuf::io::ArrayInputStream(PyStr_AsString(value), PyBytes_Size(value));
       google::protobuf::io::CodedInputStream* inputStream =
           new google::protobuf::io::CodedInputStream(input);
       inputStream->SetTotalBytesLimit(512 * 1024 * 1024, 512 * 1024 * 1024);
@@ -5323,7 +5348,7 @@ namespace {
       }
 
       google::protobuf::io::ZeroCopyInputStream* input =
-          new google::protobuf::io::ArrayInputStream(PyString_AsString(value), PyString_Size(value));
+          new google::protobuf::io::ArrayInputStream(PyStr_AsString(value), PyBytes_Size(value));
       google::protobuf::io::CodedInputStream* inputStream =
           new google::protobuf::io::CodedInputStream(input);
       inputStream->SetTotalBytesLimit(512 * 1024 * 1024, 512 * 1024 * 1024);
@@ -5410,7 +5435,7 @@ namespace {
 
       
 
-        if (!PyType_IsSubtype(value->ob_type, &HeaderBBoxType)) {
+        if (!PyType_IsSubtype(Py_TYPE(value), &HeaderBBoxType)) {
           PyErr_SetString(PyExc_TypeError,
                           "The bbox attribute value must be an instance of HeaderBBox");
           return -1;
@@ -5463,7 +5488,7 @@ namespace {
       }
 
       
-        if (PyString_Check(input)) {
+        if (PyStr_Check(input)) {
           PyErr_SetString(PyExc_TypeError, "The required_features attribute value must be a sequence");
           return -1;
         }
@@ -5482,12 +5507,12 @@ namespace {
           reallocated = true;
         }
 
-        if (! PyString_Check(value)) {
+        if (! PyStr_Check(value)) {
           PyErr_SetString(PyExc_TypeError, "The required_features attribute value must be a string");
           return -1;
         }
 
-        std::string protoValue(PyString_AsString(value), PyString_Size(value));
+        std::string protoValue(PyStr_AsString(value), PyBytes_Size(value));
         if (reallocated) {
           Py_XDECREF(value);
         }
@@ -5537,7 +5562,7 @@ namespace {
       }
 
       
-        if (PyString_Check(input)) {
+        if (PyStr_Check(input)) {
           PyErr_SetString(PyExc_TypeError, "The optional_features attribute value must be a sequence");
           return -1;
         }
@@ -5556,12 +5581,12 @@ namespace {
           reallocated = true;
         }
 
-        if (! PyString_Check(value)) {
+        if (! PyStr_Check(value)) {
           PyErr_SetString(PyExc_TypeError, "The optional_features attribute value must be a string");
           return -1;
         }
 
-        std::string protoValue(PyString_AsString(value), PyString_Size(value));
+        std::string protoValue(PyStr_AsString(value), PyBytes_Size(value));
         if (reallocated) {
           Py_XDECREF(value);
         }
@@ -5617,12 +5642,12 @@ namespace {
           reallocated = true;
         }
 
-        if (! PyString_Check(value)) {
+        if (! PyStr_Check(value)) {
           PyErr_SetString(PyExc_TypeError, "The writingprogram attribute value must be a string");
           return -1;
         }
 
-        std::string protoValue(PyString_AsString(value), PyString_Size(value));
+        std::string protoValue(PyStr_AsString(value), PyBytes_Size(value));
         if (reallocated) {
           Py_XDECREF(value);
         }
@@ -5675,12 +5700,12 @@ namespace {
           reallocated = true;
         }
 
-        if (! PyString_Check(value)) {
+        if (! PyStr_Check(value)) {
           PyErr_SetString(PyExc_TypeError, "The source attribute value must be a string");
           return -1;
         }
 
-        std::string protoValue(PyString_AsString(value), PyString_Size(value));
+        std::string protoValue(PyStr_AsString(value), PyBytes_Size(value));
         if (reallocated) {
           Py_XDECREF(value);
         }
@@ -5774,7 +5799,7 @@ namespace {
   HeaderBlock_richcompare(PyObject *self, PyObject *other, int op)
   {
       PyObject *result = NULL;
-      if (!PyType_IsSubtype(other->ob_type, &HeaderBlockType)) {
+      if (!PyType_IsSubtype(Py_TYPE(other), &HeaderBlockType)) {
           result = Py_NotImplemented;
       } else {
           // This is not a particularly efficient implementation since it never short circuits, but it's better
@@ -5832,7 +5857,7 @@ namespace {
         result << "bbox=";
         member = HeaderBlock_getbbox(self, NULL);
         memberRepr = PyObject_Repr(member);
-        result << PyString_AsString(memberRepr);
+        result << PyStr_AsString(memberRepr);
         Py_XDECREF(memberRepr);
         Py_XDECREF(member);
       
@@ -5842,7 +5867,7 @@ namespace {
         result << "required_features=";
         member = HeaderBlock_getrequired_features(self, NULL);
         memberRepr = PyObject_Repr(member);
-        result << PyString_AsString(memberRepr);
+        result << PyStr_AsString(memberRepr);
         Py_XDECREF(memberRepr);
         Py_XDECREF(member);
       
@@ -5852,7 +5877,7 @@ namespace {
         result << "optional_features=";
         member = HeaderBlock_getoptional_features(self, NULL);
         memberRepr = PyObject_Repr(member);
-        result << PyString_AsString(memberRepr);
+        result << PyStr_AsString(memberRepr);
         Py_XDECREF(memberRepr);
         Py_XDECREF(member);
       
@@ -5862,7 +5887,7 @@ namespace {
         result << "writingprogram=";
         member = HeaderBlock_getwritingprogram(self, NULL);
         memberRepr = PyObject_Repr(member);
-        result << PyString_AsString(memberRepr);
+        result << PyStr_AsString(memberRepr);
         Py_XDECREF(memberRepr);
         Py_XDECREF(member);
       
@@ -5872,7 +5897,7 @@ namespace {
         result << "source=";
         member = HeaderBlock_getsource(self, NULL);
         memberRepr = PyObject_Repr(member);
-        result << PyString_AsString(memberRepr);
+        result << PyStr_AsString(memberRepr);
         Py_XDECREF(memberRepr);
         Py_XDECREF(member);
       
@@ -5944,8 +5969,9 @@ namespace {
 
 
   PyTypeObject HeaderBlockType = {
-      PyObject_HEAD_INIT(NULL)
-      0,                                      /*ob_size*/
+				 PyVarObject_HEAD_INIT(NULL, 0)
+				 //      PyObject_HEAD_INIT(NULL)
+				 //      0,                                      /*ob_size*/
       "OSMPBF.HeaderBlock",  /*tp_name*/
       sizeof(HeaderBlock),             /*tp_basicsize*/
       0,                                      /*tp_itemsize*/
@@ -6004,7 +6030,7 @@ namespace {
   Node_dealloc(Node* self)
   {
       delete self->protobuf;
-      self->ob_type->tp_free((PyObject*)self);
+      Py_TYPE(self)->tp_free((PyObject*)self);
   }
 
   PyObject *
@@ -6037,7 +6063,7 @@ namespace {
       Py_BEGIN_ALLOW_THREADS
       self->protobuf->SerializeToString(&result);
       Py_END_ALLOW_THREADS
-      return PyString_FromStringAndSize(result.data(), result.length());
+      return PyStr_FromStringAndSize(result.data(), result.length());
   }
 
 
@@ -6063,14 +6089,14 @@ namespace {
       Py_XDECREF(sequence);
       delete outputStream;
       delete output;
-      return PyString_FromStringAndSize(result.data(), result.length());
+      return PyStr_FromStringAndSize(result.data(), result.length());
   }
 
 
   PyObject *
   Node_ParseFromString(Node* self, PyObject *value)
   {
-      std::string serialized(PyString_AsString(value), PyString_Size(value));
+      std::string serialized(PyStr_AsString(value), PyBytes_Size(value));
       Py_BEGIN_ALLOW_THREADS
       self->protobuf->ParseFromString(serialized);
       Py_END_ALLOW_THREADS
@@ -6082,7 +6108,7 @@ namespace {
   Node_ParseFromLongString(Node* self, PyObject *value)
   {
       google::protobuf::io::ZeroCopyInputStream* input =
-          new google::protobuf::io::ArrayInputStream(PyString_AsString(value), PyString_Size(value));
+          new google::protobuf::io::ArrayInputStream(PyStr_AsString(value), PyBytes_Size(value));
       google::protobuf::io::CodedInputStream* inputStream =
           new google::protobuf::io::CodedInputStream(input);
       inputStream->SetTotalBytesLimit(512 * 1024 * 1024, 512 * 1024 * 1024);
@@ -6110,7 +6136,7 @@ namespace {
       }
 
       google::protobuf::io::ZeroCopyInputStream* input =
-          new google::protobuf::io::ArrayInputStream(PyString_AsString(value), PyString_Size(value));
+          new google::protobuf::io::ArrayInputStream(PyStr_AsString(value), PyBytes_Size(value));
       google::protobuf::io::CodedInputStream* inputStream =
           new google::protobuf::io::CodedInputStream(input);
       inputStream->SetTotalBytesLimit(512 * 1024 * 1024, 512 * 1024 * 1024);
@@ -6190,13 +6216,10 @@ namespace {
         ::google::protobuf::int64 protoValue;
 
         // int64
-        if (PyInt_Check(value)) {
-          protoValue = PyInt_AsLong(value);
-        } else if (PyLong_Check(value)) {
-          protoValue = PyLong_AsLongLong(value);
-        } else {
-          PyErr_SetString(PyExc_TypeError,
-                          "The id attribute value must be an integer");
+	try {
+	  protoValue = int64_convert(value, "The id attribute value must be an integer");
+	}
+	catch (int e) {
           return -1;
         }
 
@@ -6242,7 +6265,7 @@ namespace {
       }
 
       
-        if (PyString_Check(input)) {
+        if (PyStr_Check(input)) {
           PyErr_SetString(PyExc_TypeError, "The keys attribute value must be a sequence");
           return -1;
         }
@@ -6259,13 +6282,10 @@ namespace {
         
 
         // uint32
-        if (PyInt_Check(value)) {
-          protoValue = PyInt_AsUnsignedLongMask(value);
-        } else if (PyLong_Check(value)) {
-          protoValue = PyLong_AsUnsignedLong(value);
-        } else {
-          PyErr_SetString(PyExc_TypeError,
-                          "The keys attribute value must be an integer");
+	try {
+	  protoValue = uint32_convert(value, "The keys attribute value must be an integer");
+	}
+	catch (int e) {
           return -1;
         }
 
@@ -6314,7 +6334,7 @@ namespace {
       }
 
       
-        if (PyString_Check(input)) {
+        if (PyStr_Check(input)) {
           PyErr_SetString(PyExc_TypeError, "The vals attribute value must be a sequence");
           return -1;
         }
@@ -6331,15 +6351,12 @@ namespace {
         
 
         // uint32
-        if (PyInt_Check(value)) {
-          protoValue = PyInt_AsUnsignedLongMask(value);
-        } else if (PyLong_Check(value)) {
-          protoValue = PyLong_AsUnsignedLong(value);
-        } else {
-          PyErr_SetString(PyExc_TypeError,
-                          "The vals attribute value must be an integer");
-          return -1;
-        }
+	  try {
+	    protoValue = uint32_convert(value, "The vals attribute value must be an integer");
+	  }
+	  catch (int e) {
+	    return -1;
+	  }
 
       
 
@@ -6395,7 +6412,7 @@ namespace {
 
       
 
-        if (!PyType_IsSubtype(value->ob_type, &InfoType)) {
+        if (!PyType_IsSubtype(Py_TYPE(value), &InfoType)) {
           PyErr_SetString(PyExc_TypeError,
                           "The info attribute value must be an instance of Info");
           return -1;
@@ -6450,13 +6467,10 @@ namespace {
         ::google::protobuf::int64 protoValue;
 
         // int64
-        if (PyInt_Check(value)) {
-          protoValue = PyInt_AsLong(value);
-        } else if (PyLong_Check(value)) {
-          protoValue = PyLong_AsLongLong(value);
-        } else {
-          PyErr_SetString(PyExc_TypeError,
-                          "The lat attribute value must be an integer");
+	try {
+	  protoValue = int64_convert(value, "The lat attribute value must be an integer");
+	}
+	catch (int e) {
           return -1;
         }
 
@@ -6504,13 +6518,10 @@ namespace {
         ::google::protobuf::int64 protoValue;
 
         // int64
-        if (PyInt_Check(value)) {
-          protoValue = PyInt_AsLong(value);
-        } else if (PyLong_Check(value)) {
-          protoValue = PyLong_AsLongLong(value);
-        } else {
-          PyErr_SetString(PyExc_TypeError,
-                          "The lon attribute value must be an integer");
+	try {
+	  protoValue = int64_convert(value, "The lon attribute value must be an integer");
+	}
+	catch (int e) {
           return -1;
         }
 
@@ -6613,7 +6624,7 @@ namespace {
   Node_richcompare(PyObject *self, PyObject *other, int op)
   {
       PyObject *result = NULL;
-      if (!PyType_IsSubtype(other->ob_type, &NodeType)) {
+      if (!PyType_IsSubtype(Py_TYPE(other), &NodeType)) {
           result = Py_NotImplemented;
       } else {
           // This is not a particularly efficient implementation since it never short circuits, but it's better
@@ -6671,7 +6682,7 @@ namespace {
         result << "id=";
         member = Node_getid(self, NULL);
         memberRepr = PyObject_Repr(member);
-        result << PyString_AsString(memberRepr);
+        result << PyStr_AsString(memberRepr);
         Py_XDECREF(memberRepr);
         Py_XDECREF(member);
       
@@ -6681,7 +6692,7 @@ namespace {
         result << "keys=";
         member = Node_getkeys(self, NULL);
         memberRepr = PyObject_Repr(member);
-        result << PyString_AsString(memberRepr);
+        result << PyStr_AsString(memberRepr);
         Py_XDECREF(memberRepr);
         Py_XDECREF(member);
       
@@ -6691,7 +6702,7 @@ namespace {
         result << "vals=";
         member = Node_getvals(self, NULL);
         memberRepr = PyObject_Repr(member);
-        result << PyString_AsString(memberRepr);
+        result << PyStr_AsString(memberRepr);
         Py_XDECREF(memberRepr);
         Py_XDECREF(member);
       
@@ -6701,7 +6712,7 @@ namespace {
         result << "info=";
         member = Node_getinfo(self, NULL);
         memberRepr = PyObject_Repr(member);
-        result << PyString_AsString(memberRepr);
+        result << PyStr_AsString(memberRepr);
         Py_XDECREF(memberRepr);
         Py_XDECREF(member);
       
@@ -6711,7 +6722,7 @@ namespace {
         result << "lat=";
         member = Node_getlat(self, NULL);
         memberRepr = PyObject_Repr(member);
-        result << PyString_AsString(memberRepr);
+        result << PyStr_AsString(memberRepr);
         Py_XDECREF(memberRepr);
         Py_XDECREF(member);
       
@@ -6721,7 +6732,7 @@ namespace {
         result << "lon=";
         member = Node_getlon(self, NULL);
         memberRepr = PyObject_Repr(member);
-        result << PyString_AsString(memberRepr);
+        result << PyStr_AsString(memberRepr);
         Py_XDECREF(memberRepr);
         Py_XDECREF(member);
       
@@ -6798,8 +6809,9 @@ namespace {
 
 
   PyTypeObject NodeType = {
-      PyObject_HEAD_INIT(NULL)
-      0,                                      /*ob_size*/
+				 PyVarObject_HEAD_INIT(NULL, 0)
+				 //      PyObject_HEAD_INIT(NULL)
+				 //      0,                                      /*ob_size*/
       "OSMPBF.Node",  /*tp_name*/
       sizeof(Node),             /*tp_basicsize*/
       0,                                      /*tp_itemsize*/
@@ -6858,7 +6870,7 @@ namespace {
   Relation_dealloc(Relation* self)
   {
       delete self->protobuf;
-      self->ob_type->tp_free((PyObject*)self);
+      Py_TYPE(self)->tp_free((PyObject*)self);
   }
 
   PyObject *
@@ -6891,7 +6903,7 @@ namespace {
       Py_BEGIN_ALLOW_THREADS
       self->protobuf->SerializeToString(&result);
       Py_END_ALLOW_THREADS
-      return PyString_FromStringAndSize(result.data(), result.length());
+      return PyStr_FromStringAndSize(result.data(), result.length());
   }
 
 
@@ -6917,14 +6929,14 @@ namespace {
       Py_XDECREF(sequence);
       delete outputStream;
       delete output;
-      return PyString_FromStringAndSize(result.data(), result.length());
+      return PyStr_FromStringAndSize(result.data(), result.length());
   }
 
 
   PyObject *
   Relation_ParseFromString(Relation* self, PyObject *value)
   {
-      std::string serialized(PyString_AsString(value), PyString_Size(value));
+      std::string serialized(PyStr_AsString(value), PyBytes_Size(value));
       Py_BEGIN_ALLOW_THREADS
       self->protobuf->ParseFromString(serialized);
       Py_END_ALLOW_THREADS
@@ -6936,7 +6948,7 @@ namespace {
   Relation_ParseFromLongString(Relation* self, PyObject *value)
   {
       google::protobuf::io::ZeroCopyInputStream* input =
-          new google::protobuf::io::ArrayInputStream(PyString_AsString(value), PyString_Size(value));
+          new google::protobuf::io::ArrayInputStream(PyStr_AsString(value), PyBytes_Size(value));
       google::protobuf::io::CodedInputStream* inputStream =
           new google::protobuf::io::CodedInputStream(input);
       inputStream->SetTotalBytesLimit(512 * 1024 * 1024, 512 * 1024 * 1024);
@@ -6964,7 +6976,7 @@ namespace {
       }
 
       google::protobuf::io::ZeroCopyInputStream* input =
-          new google::protobuf::io::ArrayInputStream(PyString_AsString(value), PyString_Size(value));
+          new google::protobuf::io::ArrayInputStream(PyStr_AsString(value), PyBytes_Size(value));
       google::protobuf::io::CodedInputStream* inputStream =
           new google::protobuf::io::CodedInputStream(input);
       inputStream->SetTotalBytesLimit(512 * 1024 * 1024, 512 * 1024 * 1024);
@@ -7044,13 +7056,10 @@ namespace {
         ::google::protobuf::int64 protoValue;
 
         // int64
-        if (PyInt_Check(value)) {
-          protoValue = PyInt_AsLong(value);
-        } else if (PyLong_Check(value)) {
-          protoValue = PyLong_AsLongLong(value);
-        } else {
-          PyErr_SetString(PyExc_TypeError,
-                          "The id attribute value must be an integer");
+	try {
+	  protoValue = int64_convert(value, "The id attribute value must be an integer");
+	}
+	catch (int e) {
           return -1;
         }
 
@@ -7096,7 +7105,7 @@ namespace {
       }
 
       
-        if (PyString_Check(input)) {
+        if (PyStr_Check(input)) {
           PyErr_SetString(PyExc_TypeError, "The keys attribute value must be a sequence");
           return -1;
         }
@@ -7113,15 +7122,12 @@ namespace {
         
 
         // uint32
-        if (PyInt_Check(value)) {
-          protoValue = PyInt_AsUnsignedLongMask(value);
-        } else if (PyLong_Check(value)) {
-          protoValue = PyLong_AsUnsignedLong(value);
-        } else {
-          PyErr_SetString(PyExc_TypeError,
-                          "The keys attribute value must be an integer");
-          return -1;
-        }
+	  try {
+	    protoValue = uint32_convert(value, "The keys attribute value must be an integer");
+	  }
+	  catch (int e) {
+	    return -1;
+	  }
 
       
 
@@ -7168,7 +7174,7 @@ namespace {
       }
 
       
-        if (PyString_Check(input)) {
+        if (PyStr_Check(input)) {
           PyErr_SetString(PyExc_TypeError, "The vals attribute value must be a sequence");
           return -1;
         }
@@ -7185,15 +7191,12 @@ namespace {
         
 
         // uint32
-        if (PyInt_Check(value)) {
-          protoValue = PyInt_AsUnsignedLongMask(value);
-        } else if (PyLong_Check(value)) {
-          protoValue = PyLong_AsUnsignedLong(value);
-        } else {
-          PyErr_SetString(PyExc_TypeError,
-                          "The vals attribute value must be an integer");
-          return -1;
-        }
+	  try {
+	    protoValue = uint32_convert(value, "The vals attribute value must be an integer");
+	  }
+	  catch (int e) {
+	    return -1;
+	  }
 
       
 
@@ -7249,7 +7252,7 @@ namespace {
 
       
 
-        if (!PyType_IsSubtype(value->ob_type, &InfoType)) {
+        if (!PyType_IsSubtype(Py_TYPE(value), &InfoType)) {
           PyErr_SetString(PyExc_TypeError,
                           "The info attribute value must be an instance of Info");
           return -1;
@@ -7302,7 +7305,7 @@ namespace {
       }
 
       
-        if (PyString_Check(input)) {
+        if (PyStr_Check(input)) {
           PyErr_SetString(PyExc_TypeError, "The roles_sid attribute value must be a sequence");
           return -1;
         }
@@ -7317,13 +7320,12 @@ namespace {
         ::google::protobuf::int32 protoValue;
 
         // int32
-        if (PyInt_Check(value)) {
-          protoValue = PyInt_AsLong(value);
-        } else {
-          PyErr_SetString(PyExc_TypeError,
-                          "The roles_sid attribute value must be an integer");
-          return -1;
-        }
+	  try {
+	    protoValue = int32_convert(value, "The roles_sid attribute value must be an integer");
+	  }
+	  catch (int e) {
+	    return -1;
+	  }
 
       
 
@@ -7370,7 +7372,7 @@ namespace {
       }
 
       
-        if (PyString_Check(input)) {
+        if (PyStr_Check(input)) {
           PyErr_SetString(PyExc_TypeError, "The memids attribute value must be a sequence");
           return -1;
         }
@@ -7385,15 +7387,12 @@ namespace {
         ::google::protobuf::int64 protoValue;
 
         // int64
-        if (PyInt_Check(value)) {
-          protoValue = PyInt_AsLong(value);
-        } else if (PyLong_Check(value)) {
-          protoValue = PyLong_AsLongLong(value);
-        } else {
-          PyErr_SetString(PyExc_TypeError,
-                          "The memids attribute value must be an integer");
-          return -1;
-        }
+	  try {
+	    protoValue = int64_convert(value, "The memids attribute value must be an integer");
+	  }
+	  catch (int e) {
+	    return -1;
+	  }
 
       
 
@@ -7440,7 +7439,7 @@ namespace {
       }
 
       
-        if (PyString_Check(input)) {
+        if (PyStr_Check(input)) {
           PyErr_SetString(PyExc_TypeError, "The types attribute value must be a sequence");
           return -1;
         }
@@ -7456,11 +7455,10 @@ namespace {
         ::OSMPBF::Relation::MemberType protoValue;
 
         // int32
-        if (PyInt_Check(value)) {
-          protoValue = (::OSMPBF::Relation::MemberType) PyInt_AsLong(value);
-        } else {
-          PyErr_SetString(PyExc_TypeError,
-                          "The types attribute value must be an integer");
+       	try {
+	  protoValue = (::OSMPBF::Relation::MemberType) int32_convert(value, "The types attribute value must be an integer");
+	}
+	catch (int e) {
           return -1;
         }
 
@@ -7576,7 +7574,7 @@ namespace {
   Relation_richcompare(PyObject *self, PyObject *other, int op)
   {
       PyObject *result = NULL;
-      if (!PyType_IsSubtype(other->ob_type, &RelationType)) {
+      if (!PyType_IsSubtype(Py_TYPE(other), &RelationType)) {
           result = Py_NotImplemented;
       } else {
           // This is not a particularly efficient implementation since it never short circuits, but it's better
@@ -7634,7 +7632,7 @@ namespace {
         result << "id=";
         member = Relation_getid(self, NULL);
         memberRepr = PyObject_Repr(member);
-        result << PyString_AsString(memberRepr);
+        result << PyStr_AsString(memberRepr);
         Py_XDECREF(memberRepr);
         Py_XDECREF(member);
       
@@ -7644,7 +7642,7 @@ namespace {
         result << "keys=";
         member = Relation_getkeys(self, NULL);
         memberRepr = PyObject_Repr(member);
-        result << PyString_AsString(memberRepr);
+        result << PyStr_AsString(memberRepr);
         Py_XDECREF(memberRepr);
         Py_XDECREF(member);
       
@@ -7654,7 +7652,7 @@ namespace {
         result << "vals=";
         member = Relation_getvals(self, NULL);
         memberRepr = PyObject_Repr(member);
-        result << PyString_AsString(memberRepr);
+        result << PyStr_AsString(memberRepr);
         Py_XDECREF(memberRepr);
         Py_XDECREF(member);
       
@@ -7664,7 +7662,7 @@ namespace {
         result << "info=";
         member = Relation_getinfo(self, NULL);
         memberRepr = PyObject_Repr(member);
-        result << PyString_AsString(memberRepr);
+        result << PyStr_AsString(memberRepr);
         Py_XDECREF(memberRepr);
         Py_XDECREF(member);
       
@@ -7674,7 +7672,7 @@ namespace {
         result << "roles_sid=";
         member = Relation_getroles_sid(self, NULL);
         memberRepr = PyObject_Repr(member);
-        result << PyString_AsString(memberRepr);
+        result << PyStr_AsString(memberRepr);
         Py_XDECREF(memberRepr);
         Py_XDECREF(member);
       
@@ -7684,7 +7682,7 @@ namespace {
         result << "memids=";
         member = Relation_getmemids(self, NULL);
         memberRepr = PyObject_Repr(member);
-        result << PyString_AsString(memberRepr);
+        result << PyStr_AsString(memberRepr);
         Py_XDECREF(memberRepr);
         Py_XDECREF(member);
       
@@ -7694,7 +7692,7 @@ namespace {
         result << "types=";
         member = Relation_gettypes(self, NULL);
         memberRepr = PyObject_Repr(member);
-        result << PyString_AsString(memberRepr);
+        result << PyStr_AsString(memberRepr);
         Py_XDECREF(memberRepr);
         Py_XDECREF(member);
       
@@ -7776,8 +7774,9 @@ namespace {
 
 
   PyTypeObject RelationType = {
-      PyObject_HEAD_INIT(NULL)
-      0,                                      /*ob_size*/
+				 PyVarObject_HEAD_INIT(NULL, 0)
+				 //      PyObject_HEAD_INIT(NULL)
+				 //      0,                                      /*ob_size*/
       "OSMPBF.Relation",  /*tp_name*/
       sizeof(Relation),             /*tp_basicsize*/
       0,                                      /*tp_itemsize*/
@@ -7836,7 +7835,7 @@ namespace {
   Way_dealloc(Way* self)
   {
       delete self->protobuf;
-      self->ob_type->tp_free((PyObject*)self);
+      Py_TYPE(self)->tp_free((PyObject*)self);
   }
 
   PyObject *
@@ -7869,7 +7868,7 @@ namespace {
       Py_BEGIN_ALLOW_THREADS
       self->protobuf->SerializeToString(&result);
       Py_END_ALLOW_THREADS
-      return PyString_FromStringAndSize(result.data(), result.length());
+      return PyStr_FromStringAndSize(result.data(), result.length());
   }
 
 
@@ -7895,14 +7894,14 @@ namespace {
       Py_XDECREF(sequence);
       delete outputStream;
       delete output;
-      return PyString_FromStringAndSize(result.data(), result.length());
+      return PyStr_FromStringAndSize(result.data(), result.length());
   }
 
 
   PyObject *
   Way_ParseFromString(Way* self, PyObject *value)
   {
-      std::string serialized(PyString_AsString(value), PyString_Size(value));
+      std::string serialized(PyStr_AsString(value), PyBytes_Size(value));
       Py_BEGIN_ALLOW_THREADS
       self->protobuf->ParseFromString(serialized);
       Py_END_ALLOW_THREADS
@@ -7914,7 +7913,7 @@ namespace {
   Way_ParseFromLongString(Way* self, PyObject *value)
   {
       google::protobuf::io::ZeroCopyInputStream* input =
-          new google::protobuf::io::ArrayInputStream(PyString_AsString(value), PyString_Size(value));
+          new google::protobuf::io::ArrayInputStream(PyStr_AsString(value), PyBytes_Size(value));
       google::protobuf::io::CodedInputStream* inputStream =
           new google::protobuf::io::CodedInputStream(input);
       inputStream->SetTotalBytesLimit(512 * 1024 * 1024, 512 * 1024 * 1024);
@@ -7942,7 +7941,7 @@ namespace {
       }
 
       google::protobuf::io::ZeroCopyInputStream* input =
-          new google::protobuf::io::ArrayInputStream(PyString_AsString(value), PyString_Size(value));
+          new google::protobuf::io::ArrayInputStream(PyStr_AsString(value), PyBytes_Size(value));
       google::protobuf::io::CodedInputStream* inputStream =
           new google::protobuf::io::CodedInputStream(input);
       inputStream->SetTotalBytesLimit(512 * 1024 * 1024, 512 * 1024 * 1024);
@@ -8022,13 +8021,10 @@ namespace {
         ::google::protobuf::int64 protoValue;
 
         // int64
-        if (PyInt_Check(value)) {
-          protoValue = PyInt_AsLong(value);
-        } else if (PyLong_Check(value)) {
-          protoValue = PyLong_AsLongLong(value);
-        } else {
-          PyErr_SetString(PyExc_TypeError,
-                          "The id attribute value must be an integer");
+	try {
+	  protoValue = int64_convert(value, "The id attribute value must be an integer");
+	}
+	catch (int e) {
           return -1;
         }
 
@@ -8074,7 +8070,7 @@ namespace {
       }
 
       
-        if (PyString_Check(input)) {
+        if (PyStr_Check(input)) {
           PyErr_SetString(PyExc_TypeError, "The keys attribute value must be a sequence");
           return -1;
         }
@@ -8091,16 +8087,12 @@ namespace {
         
 
         // uint32
-        if (PyInt_Check(value)) {
-          protoValue = PyInt_AsUnsignedLongMask(value);
-        } else if (PyLong_Check(value)) {
-          protoValue = PyLong_AsUnsignedLong(value);
-        } else {
-          PyErr_SetString(PyExc_TypeError,
-                          "The keys attribute value must be an integer");
-          return -1;
-        }
-
+	  try {
+	    protoValue = uint32_convert(value, "The keys attribute value must be an integer");
+	  }
+	  catch (int e) {
+	    return -1;
+	  }
       
 
       
@@ -8146,7 +8138,7 @@ namespace {
       }
 
       
-        if (PyString_Check(input)) {
+        if (PyStr_Check(input)) {
           PyErr_SetString(PyExc_TypeError, "The vals attribute value must be a sequence");
           return -1;
         }
@@ -8163,16 +8155,12 @@ namespace {
         
 
         // uint32
-        if (PyInt_Check(value)) {
-          protoValue = PyInt_AsUnsignedLongMask(value);
-        } else if (PyLong_Check(value)) {
-          protoValue = PyLong_AsUnsignedLong(value);
-        } else {
-          PyErr_SetString(PyExc_TypeError,
-                          "The vals attribute value must be an integer");
-          return -1;
-        }
-
+	  try {
+	    protoValue = uint32_convert(value, "The vals attribute value must be an integer");
+	  }
+	  catch (int e) {
+	    return -1;
+	  }
       
 
       
@@ -8227,7 +8215,7 @@ namespace {
 
       
 
-        if (!PyType_IsSubtype(value->ob_type, &InfoType)) {
+        if (!PyType_IsSubtype(Py_TYPE(value), &InfoType)) {
           PyErr_SetString(PyExc_TypeError,
                           "The info attribute value must be an instance of Info");
           return -1;
@@ -8280,7 +8268,7 @@ namespace {
       }
 
       
-        if (PyString_Check(input)) {
+        if (PyStr_Check(input)) {
           PyErr_SetString(PyExc_TypeError, "The refs attribute value must be a sequence");
           return -1;
         }
@@ -8295,13 +8283,10 @@ namespace {
         ::google::protobuf::int64 protoValue;
 
         // int64
-        if (PyInt_Check(value)) {
-          protoValue = PyInt_AsLong(value);
-        } else if (PyLong_Check(value)) {
-          protoValue = PyLong_AsLongLong(value);
-        } else {
-          PyErr_SetString(PyExc_TypeError,
-                          "The refs attribute value must be an integer");
+	try {
+	  protoValue = int64_convert(value, "The refs attribute value must be an integer");
+	}
+	catch (int e) {
           return -1;
         }
 
@@ -8397,7 +8382,7 @@ namespace {
   Way_richcompare(PyObject *self, PyObject *other, int op)
   {
       PyObject *result = NULL;
-      if (!PyType_IsSubtype(other->ob_type, &WayType)) {
+      if (!PyType_IsSubtype(Py_TYPE(other), &WayType)) {
           result = Py_NotImplemented;
       } else {
           // This is not a particularly efficient implementation since it never short circuits, but it's better
@@ -8455,7 +8440,7 @@ namespace {
         result << "id=";
         member = Way_getid(self, NULL);
         memberRepr = PyObject_Repr(member);
-        result << PyString_AsString(memberRepr);
+        result << PyStr_AsString(memberRepr);
         Py_XDECREF(memberRepr);
         Py_XDECREF(member);
       
@@ -8465,7 +8450,7 @@ namespace {
         result << "keys=";
         member = Way_getkeys(self, NULL);
         memberRepr = PyObject_Repr(member);
-        result << PyString_AsString(memberRepr);
+        result << PyStr_AsString(memberRepr);
         Py_XDECREF(memberRepr);
         Py_XDECREF(member);
       
@@ -8475,7 +8460,7 @@ namespace {
         result << "vals=";
         member = Way_getvals(self, NULL);
         memberRepr = PyObject_Repr(member);
-        result << PyString_AsString(memberRepr);
+        result << PyStr_AsString(memberRepr);
         Py_XDECREF(memberRepr);
         Py_XDECREF(member);
       
@@ -8485,7 +8470,7 @@ namespace {
         result << "info=";
         member = Way_getinfo(self, NULL);
         memberRepr = PyObject_Repr(member);
-        result << PyString_AsString(memberRepr);
+        result << PyStr_AsString(memberRepr);
         Py_XDECREF(memberRepr);
         Py_XDECREF(member);
       
@@ -8495,7 +8480,7 @@ namespace {
         result << "refs=";
         member = Way_getrefs(self, NULL);
         memberRepr = PyObject_Repr(member);
-        result << PyString_AsString(memberRepr);
+        result << PyStr_AsString(memberRepr);
         Py_XDECREF(memberRepr);
         Py_XDECREF(member);
       
@@ -8567,8 +8552,9 @@ namespace {
 
 
   PyTypeObject WayType = {
-      PyObject_HEAD_INIT(NULL)
-      0,                                      /*ob_size*/
+				 PyVarObject_HEAD_INIT(NULL, 0)
+				 //      PyObject_HEAD_INIT(NULL)
+				 //      0,                                      /*ob_size*/
       "OSMPBF.Way",  /*tp_name*/
       sizeof(Way),             /*tp_basicsize*/
       0,                                      /*tp_itemsize*/
@@ -8627,7 +8613,7 @@ namespace {
   PrimitiveGroup_dealloc(PrimitiveGroup* self)
   {
       delete self->protobuf;
-      self->ob_type->tp_free((PyObject*)self);
+      Py_TYPE(self)->tp_free((PyObject*)self);
   }
 
   PyObject *
@@ -8660,7 +8646,7 @@ namespace {
       Py_BEGIN_ALLOW_THREADS
       self->protobuf->SerializeToString(&result);
       Py_END_ALLOW_THREADS
-      return PyString_FromStringAndSize(result.data(), result.length());
+      return PyStr_FromStringAndSize(result.data(), result.length());
   }
 
 
@@ -8686,14 +8672,14 @@ namespace {
       Py_XDECREF(sequence);
       delete outputStream;
       delete output;
-      return PyString_FromStringAndSize(result.data(), result.length());
+      return PyStr_FromStringAndSize(result.data(), result.length());
   }
 
 
   PyObject *
   PrimitiveGroup_ParseFromString(PrimitiveGroup* self, PyObject *value)
   {
-      std::string serialized(PyString_AsString(value), PyString_Size(value));
+      std::string serialized(PyStr_AsString(value), PyBytes_Size(value));
       Py_BEGIN_ALLOW_THREADS
       self->protobuf->ParseFromString(serialized);
       Py_END_ALLOW_THREADS
@@ -8705,7 +8691,7 @@ namespace {
   PrimitiveGroup_ParseFromLongString(PrimitiveGroup* self, PyObject *value)
   {
       google::protobuf::io::ZeroCopyInputStream* input =
-          new google::protobuf::io::ArrayInputStream(PyString_AsString(value), PyString_Size(value));
+          new google::protobuf::io::ArrayInputStream(PyStr_AsString(value), PyBytes_Size(value));
       google::protobuf::io::CodedInputStream* inputStream =
           new google::protobuf::io::CodedInputStream(input);
       inputStream->SetTotalBytesLimit(512 * 1024 * 1024, 512 * 1024 * 1024);
@@ -8733,7 +8719,7 @@ namespace {
       }
 
       google::protobuf::io::ZeroCopyInputStream* input =
-          new google::protobuf::io::ArrayInputStream(PyString_AsString(value), PyString_Size(value));
+          new google::protobuf::io::ArrayInputStream(PyStr_AsString(value), PyBytes_Size(value));
       google::protobuf::io::CodedInputStream* inputStream =
           new google::protobuf::io::CodedInputStream(input);
       inputStream->SetTotalBytesLimit(512 * 1024 * 1024, 512 * 1024 * 1024);
@@ -8820,7 +8806,7 @@ namespace {
       }
 
       
-        if (PyString_Check(input)) {
+        if (PyStr_Check(input)) {
           PyErr_SetString(PyExc_TypeError, "The nodes attribute value must be a sequence");
           return -1;
         }
@@ -8833,7 +8819,7 @@ namespace {
 
       
 
-        if (!PyType_IsSubtype(value->ob_type, &NodeType)) {
+        if (!PyType_IsSubtype(Py_TYPE(value), &NodeType)) {
           PyErr_SetString(PyExc_TypeError,
                           "The nodes attribute value must be an instance of Node");
           return -1;
@@ -8897,7 +8883,7 @@ namespace {
 
       
 
-        if (!PyType_IsSubtype(value->ob_type, &DenseNodesType)) {
+        if (!PyType_IsSubtype(Py_TYPE(value), &DenseNodesType)) {
           PyErr_SetString(PyExc_TypeError,
                           "The dense attribute value must be an instance of DenseNodes");
           return -1;
@@ -8959,7 +8945,7 @@ namespace {
       }
 
       
-        if (PyString_Check(input)) {
+        if (PyStr_Check(input)) {
           PyErr_SetString(PyExc_TypeError, "The ways attribute value must be a sequence");
           return -1;
         }
@@ -8972,7 +8958,7 @@ namespace {
 
       
 
-        if (!PyType_IsSubtype(value->ob_type, &WayType)) {
+        if (!PyType_IsSubtype(Py_TYPE(value), &WayType)) {
           PyErr_SetString(PyExc_TypeError,
                           "The ways attribute value must be an instance of Way");
           return -1;
@@ -9036,7 +9022,7 @@ namespace {
       }
 
       
-        if (PyString_Check(input)) {
+        if (PyStr_Check(input)) {
           PyErr_SetString(PyExc_TypeError, "The relations attribute value must be a sequence");
           return -1;
         }
@@ -9049,7 +9035,7 @@ namespace {
 
       
 
-        if (!PyType_IsSubtype(value->ob_type, &RelationType)) {
+        if (!PyType_IsSubtype(Py_TYPE(value), &RelationType)) {
           PyErr_SetString(PyExc_TypeError,
                           "The relations attribute value must be an instance of Relation");
           return -1;
@@ -9113,7 +9099,7 @@ namespace {
       }
 
       
-        if (PyString_Check(input)) {
+        if (PyStr_Check(input)) {
           PyErr_SetString(PyExc_TypeError, "The changesets attribute value must be a sequence");
           return -1;
         }
@@ -9126,7 +9112,7 @@ namespace {
 
       
 
-        if (!PyType_IsSubtype(value->ob_type, &ChangeSetType)) {
+        if (!PyType_IsSubtype(Py_TYPE(value), &ChangeSetType)) {
           PyErr_SetString(PyExc_TypeError,
                           "The changesets attribute value must be an instance of ChangeSet");
           return -1;
@@ -9228,7 +9214,7 @@ namespace {
   PrimitiveGroup_richcompare(PyObject *self, PyObject *other, int op)
   {
       PyObject *result = NULL;
-      if (!PyType_IsSubtype(other->ob_type, &PrimitiveGroupType)) {
+      if (!PyType_IsSubtype(Py_TYPE(other), &PrimitiveGroupType)) {
           result = Py_NotImplemented;
       } else {
           // This is not a particularly efficient implementation since it never short circuits, but it's better
@@ -9286,7 +9272,7 @@ namespace {
         result << "nodes=";
         member = PrimitiveGroup_getnodes(self, NULL);
         memberRepr = PyObject_Repr(member);
-        result << PyString_AsString(memberRepr);
+        result << PyStr_AsString(memberRepr);
         Py_XDECREF(memberRepr);
         Py_XDECREF(member);
       
@@ -9296,7 +9282,7 @@ namespace {
         result << "dense=";
         member = PrimitiveGroup_getdense(self, NULL);
         memberRepr = PyObject_Repr(member);
-        result << PyString_AsString(memberRepr);
+        result << PyStr_AsString(memberRepr);
         Py_XDECREF(memberRepr);
         Py_XDECREF(member);
       
@@ -9306,7 +9292,7 @@ namespace {
         result << "ways=";
         member = PrimitiveGroup_getways(self, NULL);
         memberRepr = PyObject_Repr(member);
-        result << PyString_AsString(memberRepr);
+        result << PyStr_AsString(memberRepr);
         Py_XDECREF(memberRepr);
         Py_XDECREF(member);
       
@@ -9316,7 +9302,7 @@ namespace {
         result << "relations=";
         member = PrimitiveGroup_getrelations(self, NULL);
         memberRepr = PyObject_Repr(member);
-        result << PyString_AsString(memberRepr);
+        result << PyStr_AsString(memberRepr);
         Py_XDECREF(memberRepr);
         Py_XDECREF(member);
       
@@ -9326,7 +9312,7 @@ namespace {
         result << "changesets=";
         member = PrimitiveGroup_getchangesets(self, NULL);
         memberRepr = PyObject_Repr(member);
-        result << PyString_AsString(memberRepr);
+        result << PyStr_AsString(memberRepr);
         Py_XDECREF(memberRepr);
         Py_XDECREF(member);
       
@@ -9398,8 +9384,9 @@ namespace {
 
 
   PyTypeObject PrimitiveGroupType = {
-      PyObject_HEAD_INIT(NULL)
-      0,                                      /*ob_size*/
+				 PyVarObject_HEAD_INIT(NULL, 0)
+				 //      PyObject_HEAD_INIT(NULL)
+				 //      0,                                      /*ob_size*/
       "OSMPBF.PrimitiveGroup",  /*tp_name*/
       sizeof(PrimitiveGroup),             /*tp_basicsize*/
       0,                                      /*tp_itemsize*/
@@ -9458,7 +9445,7 @@ namespace {
   PrimitiveBlock_dealloc(PrimitiveBlock* self)
   {
       delete self->protobuf;
-      self->ob_type->tp_free((PyObject*)self);
+      Py_TYPE(self)->tp_free((PyObject*)self);
   }
 
   PyObject *
@@ -9491,7 +9478,7 @@ namespace {
       Py_BEGIN_ALLOW_THREADS
       self->protobuf->SerializeToString(&result);
       Py_END_ALLOW_THREADS
-      return PyString_FromStringAndSize(result.data(), result.length());
+      return PyStr_FromStringAndSize(result.data(), result.length());
   }
 
 
@@ -9517,14 +9504,14 @@ namespace {
       Py_XDECREF(sequence);
       delete outputStream;
       delete output;
-      return PyString_FromStringAndSize(result.data(), result.length());
+      return PyStr_FromStringAndSize(result.data(), result.length());
   }
 
 
   PyObject *
   PrimitiveBlock_ParseFromString(PrimitiveBlock* self, PyObject *value)
   {
-      std::string serialized(PyString_AsString(value), PyString_Size(value));
+      std::string serialized(PyStr_AsString(value), PyBytes_Size(value));
       Py_BEGIN_ALLOW_THREADS
       self->protobuf->ParseFromString(serialized);
       Py_END_ALLOW_THREADS
@@ -9536,7 +9523,7 @@ namespace {
   PrimitiveBlock_ParseFromLongString(PrimitiveBlock* self, PyObject *value)
   {
       google::protobuf::io::ZeroCopyInputStream* input =
-          new google::protobuf::io::ArrayInputStream(PyString_AsString(value), PyString_Size(value));
+          new google::protobuf::io::ArrayInputStream(PyStr_AsString(value), PyBytes_Size(value));
       google::protobuf::io::CodedInputStream* inputStream =
           new google::protobuf::io::CodedInputStream(input);
       inputStream->SetTotalBytesLimit(512 * 1024 * 1024, 512 * 1024 * 1024);
@@ -9564,7 +9551,7 @@ namespace {
       }
 
       google::protobuf::io::ZeroCopyInputStream* input =
-          new google::protobuf::io::ArrayInputStream(PyString_AsString(value), PyString_Size(value));
+          new google::protobuf::io::ArrayInputStream(PyStr_AsString(value), PyBytes_Size(value));
       google::protobuf::io::CodedInputStream* inputStream =
           new google::protobuf::io::CodedInputStream(input);
       inputStream->SetTotalBytesLimit(512 * 1024 * 1024, 512 * 1024 * 1024);
@@ -9651,7 +9638,7 @@ namespace {
 
       
 
-        if (!PyType_IsSubtype(value->ob_type, &StringTableType)) {
+        if (!PyType_IsSubtype(Py_TYPE(value), &StringTableType)) {
           PyErr_SetString(PyExc_TypeError,
                           "The stringtable attribute value must be an instance of StringTable");
           return -1;
@@ -9713,7 +9700,7 @@ namespace {
       }
 
       
-        if (PyString_Check(input)) {
+        if (PyStr_Check(input)) {
           PyErr_SetString(PyExc_TypeError, "The primitivegroup attribute value must be a sequence");
           return -1;
         }
@@ -9726,7 +9713,7 @@ namespace {
 
       
 
-        if (!PyType_IsSubtype(value->ob_type, &PrimitiveGroupType)) {
+        if (!PyType_IsSubtype(Py_TYPE(value), &PrimitiveGroupType)) {
           PyErr_SetString(PyExc_TypeError,
                           "The primitivegroup attribute value must be an instance of PrimitiveGroup");
           return -1;
@@ -9783,11 +9770,10 @@ namespace {
         ::google::protobuf::int32 protoValue;
 
         // int32
-        if (PyInt_Check(value)) {
-          protoValue = PyInt_AsLong(value);
-        } else {
-          PyErr_SetString(PyExc_TypeError,
-                          "The granularity attribute value must be an integer");
+	try {
+	  protoValue = int32_convert(value, "The granularity attribute value must be an integer");
+	}
+	catch (int e) {
           return -1;
         }
 
@@ -9835,13 +9821,10 @@ namespace {
         ::google::protobuf::int64 protoValue;
 
         // int64
-        if (PyInt_Check(value)) {
-          protoValue = PyInt_AsLong(value);
-        } else if (PyLong_Check(value)) {
-          protoValue = PyLong_AsLongLong(value);
-        } else {
-          PyErr_SetString(PyExc_TypeError,
-                          "The lat_offset attribute value must be an integer");
+	try {
+	  protoValue = int64_convert(value, "The lat_offet attribute value must be an integer");
+	}
+	catch (int e) {
           return -1;
         }
 
@@ -9889,13 +9872,10 @@ namespace {
         ::google::protobuf::int64 protoValue;
 
         // int64
-        if (PyInt_Check(value)) {
-          protoValue = PyInt_AsLong(value);
-        } else if (PyLong_Check(value)) {
-          protoValue = PyLong_AsLongLong(value);
-        } else {
-          PyErr_SetString(PyExc_TypeError,
-                          "The lon_offset attribute value must be an integer");
+	try {
+	  protoValue = int64_convert(value, "The lon_offset attribute value must be an integer");
+	}
+	catch (int e) {
           return -1;
         }
 
@@ -9943,11 +9923,10 @@ namespace {
         ::google::protobuf::int32 protoValue;
 
         // int32
-        if (PyInt_Check(value)) {
-          protoValue = PyInt_AsLong(value);
-        } else {
-          PyErr_SetString(PyExc_TypeError,
-                          "The date_granularity attribute value must be an integer");
+	try {
+	  protoValue = int32_convert(value, "The data_granularity attribute value must be an integer");
+	}
+	catch (int e) {
           return -1;
         }
 
@@ -10050,7 +10029,7 @@ namespace {
   PrimitiveBlock_richcompare(PyObject *self, PyObject *other, int op)
   {
       PyObject *result = NULL;
-      if (!PyType_IsSubtype(other->ob_type, &PrimitiveBlockType)) {
+      if (!PyType_IsSubtype(Py_TYPE(other), &PrimitiveBlockType)) {
           result = Py_NotImplemented;
       } else {
           // This is not a particularly efficient implementation since it never short circuits, but it's better
@@ -10108,7 +10087,7 @@ namespace {
         result << "stringtable=";
         member = PrimitiveBlock_getstringtable(self, NULL);
         memberRepr = PyObject_Repr(member);
-        result << PyString_AsString(memberRepr);
+        result << PyStr_AsString(memberRepr);
         Py_XDECREF(memberRepr);
         Py_XDECREF(member);
       
@@ -10118,7 +10097,7 @@ namespace {
         result << "primitivegroup=";
         member = PrimitiveBlock_getprimitivegroup(self, NULL);
         memberRepr = PyObject_Repr(member);
-        result << PyString_AsString(memberRepr);
+        result << PyStr_AsString(memberRepr);
         Py_XDECREF(memberRepr);
         Py_XDECREF(member);
       
@@ -10128,7 +10107,7 @@ namespace {
         result << "granularity=";
         member = PrimitiveBlock_getgranularity(self, NULL);
         memberRepr = PyObject_Repr(member);
-        result << PyString_AsString(memberRepr);
+        result << PyStr_AsString(memberRepr);
         Py_XDECREF(memberRepr);
         Py_XDECREF(member);
       
@@ -10138,7 +10117,7 @@ namespace {
         result << "lat_offset=";
         member = PrimitiveBlock_getlat_offset(self, NULL);
         memberRepr = PyObject_Repr(member);
-        result << PyString_AsString(memberRepr);
+        result << PyStr_AsString(memberRepr);
         Py_XDECREF(memberRepr);
         Py_XDECREF(member);
       
@@ -10148,7 +10127,7 @@ namespace {
         result << "lon_offset=";
         member = PrimitiveBlock_getlon_offset(self, NULL);
         memberRepr = PyObject_Repr(member);
-        result << PyString_AsString(memberRepr);
+        result << PyStr_AsString(memberRepr);
         Py_XDECREF(memberRepr);
         Py_XDECREF(member);
       
@@ -10158,7 +10137,7 @@ namespace {
         result << "date_granularity=";
         member = PrimitiveBlock_getdate_granularity(self, NULL);
         memberRepr = PyObject_Repr(member);
-        result << PyString_AsString(memberRepr);
+        result << PyStr_AsString(memberRepr);
         Py_XDECREF(memberRepr);
         Py_XDECREF(member);
       
@@ -10235,8 +10214,9 @@ namespace {
 
 
   PyTypeObject PrimitiveBlockType = {
-      PyObject_HEAD_INIT(NULL)
-      0,                                      /*ob_size*/
+				 PyVarObject_HEAD_INIT(NULL, 0)
+				 //      PyObject_HEAD_INIT(NULL)
+				 //      0,                                      /*ob_size*/
       "OSMPBF.PrimitiveBlock",  /*tp_name*/
       sizeof(PrimitiveBlock),             /*tp_basicsize*/
       0,                                      /*tp_itemsize*/
@@ -10283,11 +10263,60 @@ static PyMethodDef module_methods[] = {
     {NULL}  // Sentinel
 };
 
+
+struct module_state {
+    PyObject *error;
+};
+
+#if IS_PY3
+#define GETSTATE(m) ((struct module_state*)PyModule_GetState(m))
+#else
+#define GETSTATE(m) (&_state)
+static struct module_state _state;
+#endif
+
+
+#if IS_PY3
+
+
+static int OSMPBF_traverse(PyObject *m, visitproc visit, void *arg) {
+    Py_VISIT(GETSTATE(m)->error);
+    return 0;
+}
+
+static int OSMPBF_clear(PyObject *m) {
+    Py_CLEAR(GETSTATE(m)->error);
+    return 0;
+}
+
+
+static struct PyModuleDef moduledef = {
+        PyModuleDef_HEAD_INIT,
+        "OSMPBF",
+        NULL,
+        sizeof(struct module_state),
+        module_methods,
+        NULL,
+        OSMPBF_traverse,
+        OSMPBF_clear,
+        NULL
+};
+
+
+
+PyMODINIT_FUNC PyInit_OSMPBF(void);
+PyMODINIT_FUNC PyInit_OSMPBF(void)
+#else
+//static PyObject *PyInit_OSMPBF(void);
+//void initOSMPBF(void);
+//void initOSMPBF(void) { PyInit_OSMPBFFORPY2(); }
+//static PyObject *PyInit_OSMPBFFORPY2(void)
 #ifndef PyMODINIT_FUNC	// Declarations for DLL import/export.
 #define PyMODINIT_FUNC void
 #endif
 PyMODINIT_FUNC
 initOSMPBF(void)
+#endif
 {
     GOOGLE_PROTOBUF_VERIFY_VERSION;
 
@@ -10297,53 +10326,120 @@ initOSMPBF(void)
 
     
       if (PyType_Ready(&BlobType) < 0)
-          return;
+#if IS_PY3
+	return NULL;
+#else
+	return;
+#endif
     
       if (PyType_Ready(&BlobHeaderType) < 0)
-          return;
+#if IS_PY3
+	return NULL;
+#else
+	return;
+#endif
     
       if (PyType_Ready(&ChangeSetType) < 0)
-          return;
+#if IS_PY3
+	return NULL;
+#else
+	return;
+#endif
     
       if (PyType_Ready(&DenseInfoType) < 0)
-          return;
+#if IS_PY3
+	return NULL;
+#else
+	return;
+#endif
     
       if (PyType_Ready(&HeaderBBoxType) < 0)
-          return;
+#if IS_PY3
+	return NULL;
+#else
+	return;
+#endif
     
       if (PyType_Ready(&InfoType) < 0)
-          return;
+#if IS_PY3
+	return NULL;
+#else
+	return;
+#endif
     
       if (PyType_Ready(&StringTableType) < 0)
-          return;
+#if IS_PY3
+	return NULL;
+#else
+	return;
+#endif
     
       if (PyType_Ready(&DenseNodesType) < 0)
-          return;
+#if IS_PY3
+	return NULL;
+#else
+	return;
+#endif
     
       if (PyType_Ready(&HeaderBlockType) < 0)
-          return;
+#if IS_PY3
+	return NULL;
+#else
+	return;
+#endif
     
       if (PyType_Ready(&NodeType) < 0)
-          return;
+#if IS_PY3
+	return NULL;
+#else
+	return;
+#endif
     
       if (PyType_Ready(&RelationType) < 0)
-          return;
+#if IS_PY3
+	return NULL;
+#else
+	return;
+#endif
     
       if (PyType_Ready(&WayType) < 0)
-          return;
+#if IS_PY3
+	return NULL;
+#else
+	return;
+#endif
     
       if (PyType_Ready(&PrimitiveGroupType) < 0)
-          return;
+#if IS_PY3
+	return NULL;
+#else
+	return;
+#endif
     
       if (PyType_Ready(&PrimitiveBlockType) < 0)
-          return;
+#if IS_PY3
+	return NULL;
+#else
+	return;
+#endif
     
 
-    m = Py_InitModule3("OSMPBF", module_methods,
-                       "");
+#if IS_PY3
+	m = PyModule_Create(&moduledef);
+#else
+	m = Py_InitModule3("OSMPBF", module_methods,
+			   "");
+#endif
+
+	
+    struct module_state *st = GETSTATE(m);
 
     if (m == NULL)
+#if IS_PY3
+      return NULL;
+#else
       return;
+#endif
 
     
 
@@ -10389,5 +10485,9 @@ initOSMPBF(void)
     
       Py_INCREF(&PrimitiveBlockType);
       PyModule_AddObject(m, "PrimitiveBlock", (PyObject *)&PrimitiveBlockType);
-    
+
+#if IS_PY3
+      return m;
+#endif
+      
 }

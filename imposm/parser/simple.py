@@ -18,7 +18,7 @@ import multiprocessing
 import sys
 import time
 
-from Queue import Empty
+from queue import Empty
 
 from imposm.parser.util import default_concurrency, fileinput, setproctitle
 

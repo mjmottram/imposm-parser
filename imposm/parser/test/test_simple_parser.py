@@ -12,6 +12,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+from __future__ import unicode_literals
 
 import os
 from imposm.parser import OSMParser
@@ -66,7 +67,7 @@ class ParserTestBase(object):
 
         eq_(len(self.relations), 1)
         eq_(self.relations[0],
-            (4, {'name': u'Üµlåû†é'}, [(123, 'way', 'outer'), (124, 'way', 'inner')]))
+            (4, {'name': 'Üµlåû†é'}, [(123, 'way', 'outer'), (124, 'way', 'inner')]))
 
 class ParserTestBaseWithFilter(ParserTestBase):
     def nodes_filter(self, tags):

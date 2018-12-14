@@ -8,3 +8,5 @@ include osm.proto
 recursive-include imposm/parser/test *.osm *.pbf *.osm.bz2
 exclude imposm/parser/pbf/osm.pb.cc
 exclude imposm/parser/pbf/osm.pb.h
+
+graft py3c_headers
