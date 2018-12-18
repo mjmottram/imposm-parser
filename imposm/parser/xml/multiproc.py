@@ -25,6 +25,14 @@ KiB = 1024
 MiB = 1024*KiB
 
 READ_SIZE = 512*KiB
+PY3 = sys.version_info[0] == 3
+
+
+class MMapWriter(mmap.mmap):
+    def write(self, line):
+        if PY3:
+            line = line.encode('utf8')
+        super(MMapWriter, self).write(line)
 
 
 class MMapReader(object):
@@ -124,7 +132,7 @@ class MMapPool(object):
     def __init__(self, n, mmap_size):
         self.n = n
         self.mmap_size = mmap_size
-        self.pool = [mmap.mmap(-1, mmap_size) for _ in range(n)]
+        self.pool = [MMapWriter(-1, mmap_size) for _ in range(n)]
         self.free_mmaps = set(range(n))
         self.free_queue = multiprocessing.JoinableQueue()
 

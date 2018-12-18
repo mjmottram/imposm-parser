@@ -71,7 +71,7 @@ class ParserTestBase(object):
 
 class ParserTestBaseWithFilter(ParserTestBase):
     def nodes_filter(self, tags):
-        for tag in tags.keys():
+        for tag in list(tags.keys()):
             if tag != 'name':
                 del tags[tag]
     

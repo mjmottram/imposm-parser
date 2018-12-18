@@ -14,7 +14,8 @@
 
 import contextlib
 import multiprocessing
-import subprocess
+import sys
+import bz2
 
 try:
     from setproctitle import setproctitle
@@ -22,19 +23,24 @@ try:
 except ImportError:
     setproctitle = lambda x: None
 
+
+PY3 = sys.version_info[0] == 3
+
+
 def default_concurrency():
     return multiprocessing.cpu_count()
-
-def bzip_reader(filename):
-    p = subprocess.Popen(['bunzip2', '-c', filename], bufsize=-1, stdout=subprocess.PIPE)
-    return p.stdout
 
 @contextlib.contextmanager
 def fileinput(filename):
     if filename.endswith('bz2'):
-        yield bzip_reader(filename)
+        if PY3:
+            fh = bz2.open(filename, 'rt')
+        else:
+            fh = bz2.BZ2File(filename, 'r')
+        yield fh
+        fh.close()
     else:
-        fh = open(filename, 'rb')
+        fh = open(filename, 'r')
         yield fh
         fh.close()
 

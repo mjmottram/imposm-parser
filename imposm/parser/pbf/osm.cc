@@ -75,7 +75,7 @@ fastpb_convert9(const ::std::string &value)
 static PyObject *
 fastpb_convert12(const ::std::string &value)
 {
-    return PyStr_FromStringAndSize(value.data(), value.length());
+    return PyBytes_FromStringAndSize(value.data(), value.length());
 }
 
 static PyObject *
@@ -239,7 +239,7 @@ namespace {
   PyObject *
   Blob_ParseFromString(Blob* self, PyObject *value)
   {
-      std::string serialized(PyStr_AsString(value), PyBytes_Size(value));
+      std::string serialized(PyBytes_AsString(value), PyBytes_Size(value));
       Py_BEGIN_ALLOW_THREADS
       self->protobuf->ParseFromString(serialized);
       Py_END_ALLOW_THREADS
@@ -251,7 +251,7 @@ namespace {
   Blob_ParseFromLongString(Blob* self, PyObject *value)
   {
       google::protobuf::io::ZeroCopyInputStream* input =
-          new google::protobuf::io::ArrayInputStream(PyStr_AsString(value), PyBytes_Size(value));
+          new google::protobuf::io::ArrayInputStream(PyBytes_AsString(value), PyBytes_Size(value));
       google::protobuf::io::CodedInputStream* inputStream =
           new google::protobuf::io::CodedInputStream(input);
       inputStream->SetTotalBytesLimit(512 * 1024 * 1024, 512 * 1024 * 1024);
@@ -279,7 +279,7 @@ namespace {
       }
 
       google::protobuf::io::ZeroCopyInputStream* input =
-          new google::protobuf::io::ArrayInputStream(PyStr_AsString(value), PyBytes_Size(value));
+          new google::protobuf::io::ArrayInputStream(PyBytes_AsString(value), PyBytes_Size(value));
       google::protobuf::io::CodedInputStream* inputStream =
           new google::protobuf::io::CodedInputStream(input);
       inputStream->SetTotalBytesLimit(512 * 1024 * 1024, 512 * 1024 * 1024);
@@ -362,7 +362,7 @@ namespace {
           return -1;
         }
 
-        std::string protoValue(PyStr_AsString(value), PyBytes_Size(value));
+        std::string protoValue(PyBytes_AsString(value), PyBytes_Size(value));
 
       
 
@@ -431,7 +431,7 @@ namespace {
     PyObject *
     Blob_getzlib_data(Blob *self, void *closure)
     {
-        
+
           if (! self->protobuf->has_zlib_data()) {
             Py_RETURN_NONE;
           }
@@ -455,7 +455,7 @@ namespace {
         PyObject *value = input;
       
 
-      
+
         // string
         if (! PyStr_Check(value)) {
           PyErr_SetString(PyExc_TypeError, "The zlib_data attribute value must be a string");
@@ -511,7 +511,7 @@ namespace {
           return -1;
         }
 
-        std::string protoValue(PyStr_AsString(value), PyBytes_Size(value));
+        std::string protoValue(PyBytes_AsString(value), PyBytes_Size(value));
 
       
 
@@ -560,7 +560,7 @@ namespace {
           return -1;
         }
 
-        std::string protoValue(PyStr_AsString(value), PyBytes_Size(value));
+        std::string protoValue(PyBytes_AsString(value), PyBytes_Size(value));
 
       
 
@@ -709,7 +709,7 @@ namespace {
         result << "raw=";
         member = Blob_getraw(self, NULL);
         memberRepr = PyObject_Repr(member);
-        result << PyStr_AsString(memberRepr);
+        result << PyBytes_AsString(memberRepr);
         Py_XDECREF(memberRepr);
         Py_XDECREF(member);
       
@@ -719,7 +719,7 @@ namespace {
         result << "raw_size=";
         member = Blob_getraw_size(self, NULL);
         memberRepr = PyObject_Repr(member);
-        result << PyStr_AsString(memberRepr);
+        result << PyBytes_AsString(memberRepr);
         Py_XDECREF(memberRepr);
         Py_XDECREF(member);
       
@@ -729,7 +729,7 @@ namespace {
         result << "zlib_data=";
         member = Blob_getzlib_data(self, NULL);
         memberRepr = PyObject_Repr(member);
-        result << PyStr_AsString(memberRepr);
+        result << PyBytes_AsString(memberRepr);
         Py_XDECREF(memberRepr);
         Py_XDECREF(member);
       
@@ -739,7 +739,7 @@ namespace {
         result << "lzma_data=";
         member = Blob_getlzma_data(self, NULL);
         memberRepr = PyObject_Repr(member);
-        result << PyStr_AsString(memberRepr);
+        result << PyBytes_AsString(memberRepr);
         Py_XDECREF(memberRepr);
         Py_XDECREF(member);
       
@@ -749,7 +749,7 @@ namespace {
         result << "OBSOLETE_bzip2_data=";
         member = Blob_getOBSOLETE_bzip2_data(self, NULL);
         memberRepr = PyObject_Repr(member);
-        result << PyStr_AsString(memberRepr);
+        result << PyBytes_AsString(memberRepr);
         Py_XDECREF(memberRepr);
         Py_XDECREF(member);
       
@@ -948,7 +948,7 @@ namespace {
   PyObject *
   BlobHeader_ParseFromString(BlobHeader* self, PyObject *value)
   {
-      std::string serialized(PyStr_AsString(value), PyBytes_Size(value));
+      std::string serialized(PyBytes_AsString(value), PyBytes_Size(value));
       Py_BEGIN_ALLOW_THREADS
       self->protobuf->ParseFromString(serialized);
       Py_END_ALLOW_THREADS
@@ -960,7 +960,7 @@ namespace {
   BlobHeader_ParseFromLongString(BlobHeader* self, PyObject *value)
   {
       google::protobuf::io::ZeroCopyInputStream* input =
-          new google::protobuf::io::ArrayInputStream(PyStr_AsString(value), PyBytes_Size(value));
+          new google::protobuf::io::ArrayInputStream(PyBytes_AsString(value), PyBytes_Size(value));
       google::protobuf::io::CodedInputStream* inputStream =
           new google::protobuf::io::CodedInputStream(input);
       inputStream->SetTotalBytesLimit(512 * 1024 * 1024, 512 * 1024 * 1024);
@@ -988,7 +988,7 @@ namespace {
       }
 
       google::protobuf::io::ZeroCopyInputStream* input =
-          new google::protobuf::io::ArrayInputStream(PyStr_AsString(value), PyBytes_Size(value));
+          new google::protobuf::io::ArrayInputStream(PyBytes_AsString(value), PyBytes_Size(value));
       google::protobuf::io::CodedInputStream* inputStream =
           new google::protobuf::io::CodedInputStream(input);
       inputStream->SetTotalBytesLimit(512 * 1024 * 1024, 512 * 1024 * 1024);
@@ -1077,7 +1077,7 @@ namespace {
           return -1;
         }
 
-        std::string protoValue(PyStr_AsString(value), PyBytes_Size(value));
+        std::string protoValue(PyBytes_AsString(value), PyBytes_Size(value));
         if (reallocated) {
           Py_XDECREF(value);
         }
@@ -1129,7 +1129,7 @@ namespace {
           return -1;
         }
 
-        std::string protoValue(PyStr_AsString(value), PyBytes_Size(value));
+        std::string protoValue(PyBytes_AsString(value), PyBytes_Size(value));
 
       
 
@@ -1309,7 +1309,7 @@ namespace {
         result << "type=";
         member = BlobHeader_gettype(self, NULL);
         memberRepr = PyObject_Repr(member);
-        result << PyStr_AsString(memberRepr);
+        result << PyBytes_AsString(memberRepr);
         Py_XDECREF(memberRepr);
         Py_XDECREF(member);
       
@@ -1319,7 +1319,7 @@ namespace {
         result << "indexdata=";
         member = BlobHeader_getindexdata(self, NULL);
         memberRepr = PyObject_Repr(member);
-        result << PyStr_AsString(memberRepr);
+        result << PyBytes_AsString(memberRepr);
         Py_XDECREF(memberRepr);
         Py_XDECREF(member);
       
@@ -1329,7 +1329,7 @@ namespace {
         result << "datasize=";
         member = BlobHeader_getdatasize(self, NULL);
         memberRepr = PyObject_Repr(member);
-        result << PyStr_AsString(memberRepr);
+        result << PyBytes_AsString(memberRepr);
         Py_XDECREF(memberRepr);
         Py_XDECREF(member);
       
@@ -1518,7 +1518,7 @@ namespace {
   PyObject *
   ChangeSet_ParseFromString(ChangeSet* self, PyObject *value)
   {
-      std::string serialized(PyStr_AsString(value), PyBytes_Size(value));
+      std::string serialized(PyBytes_AsString(value), PyBytes_Size(value));
       Py_BEGIN_ALLOW_THREADS
       self->protobuf->ParseFromString(serialized);
       Py_END_ALLOW_THREADS
@@ -1530,7 +1530,7 @@ namespace {
   ChangeSet_ParseFromLongString(ChangeSet* self, PyObject *value)
   {
       google::protobuf::io::ZeroCopyInputStream* input =
-          new google::protobuf::io::ArrayInputStream(PyStr_AsString(value), PyBytes_Size(value));
+          new google::protobuf::io::ArrayInputStream(PyBytes_AsString(value), PyBytes_Size(value));
       google::protobuf::io::CodedInputStream* inputStream =
           new google::protobuf::io::CodedInputStream(input);
       inputStream->SetTotalBytesLimit(512 * 1024 * 1024, 512 * 1024 * 1024);
@@ -1558,7 +1558,7 @@ namespace {
       }
 
       google::protobuf::io::ZeroCopyInputStream* input =
-          new google::protobuf::io::ArrayInputStream(PyStr_AsString(value), PyBytes_Size(value));
+          new google::protobuf::io::ArrayInputStream(PyBytes_AsString(value), PyBytes_Size(value));
       google::protobuf::io::CodedInputStream* inputStream =
           new google::protobuf::io::CodedInputStream(input);
       inputStream->SetTotalBytesLimit(512 * 1024 * 1024, 512 * 1024 * 1024);
@@ -1752,7 +1752,7 @@ namespace {
         result << "id=";
         member = ChangeSet_getid(self, NULL);
         memberRepr = PyObject_Repr(member);
-        result << PyStr_AsString(memberRepr);
+        result << PyBytes_AsString(memberRepr);
         Py_XDECREF(memberRepr);
         Py_XDECREF(member);
       
@@ -1931,7 +1931,7 @@ namespace {
   PyObject *
   DenseInfo_ParseFromString(DenseInfo* self, PyObject *value)
   {
-      std::string serialized(PyStr_AsString(value), PyBytes_Size(value));
+      std::string serialized(PyBytes_AsString(value), PyBytes_Size(value));
       Py_BEGIN_ALLOW_THREADS
       self->protobuf->ParseFromString(serialized);
       Py_END_ALLOW_THREADS
@@ -1943,7 +1943,7 @@ namespace {
   DenseInfo_ParseFromLongString(DenseInfo* self, PyObject *value)
   {
       google::protobuf::io::ZeroCopyInputStream* input =
-          new google::protobuf::io::ArrayInputStream(PyStr_AsString(value), PyBytes_Size(value));
+          new google::protobuf::io::ArrayInputStream(PyBytes_AsString(value), PyBytes_Size(value));
       google::protobuf::io::CodedInputStream* inputStream =
           new google::protobuf::io::CodedInputStream(input);
       inputStream->SetTotalBytesLimit(512 * 1024 * 1024, 512 * 1024 * 1024);
@@ -1971,7 +1971,7 @@ namespace {
       }
 
       google::protobuf::io::ZeroCopyInputStream* input =
-          new google::protobuf::io::ArrayInputStream(PyStr_AsString(value), PyBytes_Size(value));
+          new google::protobuf::io::ArrayInputStream(PyBytes_AsString(value), PyBytes_Size(value));
       google::protobuf::io::CodedInputStream* inputStream =
           new google::protobuf::io::CodedInputStream(input);
       inputStream->SetTotalBytesLimit(512 * 1024 * 1024, 512 * 1024 * 1024);
@@ -2489,7 +2489,7 @@ namespace {
         result << "version=";
         member = DenseInfo_getversion(self, NULL);
         memberRepr = PyObject_Repr(member);
-        result << PyStr_AsString(memberRepr);
+        result << PyBytes_AsString(memberRepr);
         Py_XDECREF(memberRepr);
         Py_XDECREF(member);
       
@@ -2499,7 +2499,7 @@ namespace {
         result << "timestamp=";
         member = DenseInfo_gettimestamp(self, NULL);
         memberRepr = PyObject_Repr(member);
-        result << PyStr_AsString(memberRepr);
+        result << PyBytes_AsString(memberRepr);
         Py_XDECREF(memberRepr);
         Py_XDECREF(member);
       
@@ -2509,7 +2509,7 @@ namespace {
         result << "changeset=";
         member = DenseInfo_getchangeset(self, NULL);
         memberRepr = PyObject_Repr(member);
-        result << PyStr_AsString(memberRepr);
+        result << PyBytes_AsString(memberRepr);
         Py_XDECREF(memberRepr);
         Py_XDECREF(member);
       
@@ -2519,7 +2519,7 @@ namespace {
         result << "uid=";
         member = DenseInfo_getuid(self, NULL);
         memberRepr = PyObject_Repr(member);
-        result << PyStr_AsString(memberRepr);
+        result << PyBytes_AsString(memberRepr);
         Py_XDECREF(memberRepr);
         Py_XDECREF(member);
       
@@ -2529,7 +2529,7 @@ namespace {
         result << "user_sid=";
         member = DenseInfo_getuser_sid(self, NULL);
         memberRepr = PyObject_Repr(member);
-        result << PyStr_AsString(memberRepr);
+        result << PyBytes_AsString(memberRepr);
         Py_XDECREF(memberRepr);
         Py_XDECREF(member);
       
@@ -2728,7 +2728,7 @@ namespace {
   PyObject *
   HeaderBBox_ParseFromString(HeaderBBox* self, PyObject *value)
   {
-      std::string serialized(PyStr_AsString(value), PyBytes_Size(value));
+      std::string serialized(PyBytes_AsString(value), PyBytes_Size(value));
       Py_BEGIN_ALLOW_THREADS
       self->protobuf->ParseFromString(serialized);
       Py_END_ALLOW_THREADS
@@ -2740,7 +2740,7 @@ namespace {
   HeaderBBox_ParseFromLongString(HeaderBBox* self, PyObject *value)
   {
       google::protobuf::io::ZeroCopyInputStream* input =
-          new google::protobuf::io::ArrayInputStream(PyStr_AsString(value), PyBytes_Size(value));
+          new google::protobuf::io::ArrayInputStream(PyBytes_AsString(value), PyBytes_Size(value));
       google::protobuf::io::CodedInputStream* inputStream =
           new google::protobuf::io::CodedInputStream(input);
       inputStream->SetTotalBytesLimit(512 * 1024 * 1024, 512 * 1024 * 1024);
@@ -2768,7 +2768,7 @@ namespace {
       }
 
       google::protobuf::io::ZeroCopyInputStream* input =
-          new google::protobuf::io::ArrayInputStream(PyStr_AsString(value), PyBytes_Size(value));
+          new google::protobuf::io::ArrayInputStream(PyBytes_AsString(value), PyBytes_Size(value));
       google::protobuf::io::CodedInputStream* inputStream =
           new google::protobuf::io::CodedInputStream(input);
       inputStream->SetTotalBytesLimit(512 * 1024 * 1024, 512 * 1024 * 1024);
@@ -3145,7 +3145,7 @@ namespace {
         result << "left=";
         member = HeaderBBox_getleft(self, NULL);
         memberRepr = PyObject_Repr(member);
-        result << PyStr_AsString(memberRepr);
+        result << PyBytes_AsString(memberRepr);
         Py_XDECREF(memberRepr);
         Py_XDECREF(member);
       
@@ -3155,7 +3155,7 @@ namespace {
         result << "right=";
         member = HeaderBBox_getright(self, NULL);
         memberRepr = PyObject_Repr(member);
-        result << PyStr_AsString(memberRepr);
+        result << PyBytes_AsString(memberRepr);
         Py_XDECREF(memberRepr);
         Py_XDECREF(member);
       
@@ -3165,7 +3165,7 @@ namespace {
         result << "top=";
         member = HeaderBBox_gettop(self, NULL);
         memberRepr = PyObject_Repr(member);
-        result << PyStr_AsString(memberRepr);
+        result << PyBytes_AsString(memberRepr);
         Py_XDECREF(memberRepr);
         Py_XDECREF(member);
       
@@ -3175,7 +3175,7 @@ namespace {
         result << "bottom=";
         member = HeaderBBox_getbottom(self, NULL);
         memberRepr = PyObject_Repr(member);
-        result << PyStr_AsString(memberRepr);
+        result << PyBytes_AsString(memberRepr);
         Py_XDECREF(memberRepr);
         Py_XDECREF(member);
       
@@ -3369,7 +3369,7 @@ namespace {
   PyObject *
   Info_ParseFromString(Info* self, PyObject *value)
   {
-      std::string serialized(PyStr_AsString(value), PyBytes_Size(value));
+      std::string serialized(PyBytes_AsString(value), PyBytes_Size(value));
       Py_BEGIN_ALLOW_THREADS
       self->protobuf->ParseFromString(serialized);
       Py_END_ALLOW_THREADS
@@ -3381,7 +3381,7 @@ namespace {
   Info_ParseFromLongString(Info* self, PyObject *value)
   {
       google::protobuf::io::ZeroCopyInputStream* input =
-          new google::protobuf::io::ArrayInputStream(PyStr_AsString(value), PyBytes_Size(value));
+          new google::protobuf::io::ArrayInputStream(PyBytes_AsString(value), PyBytes_Size(value));
       google::protobuf::io::CodedInputStream* inputStream =
           new google::protobuf::io::CodedInputStream(input);
       inputStream->SetTotalBytesLimit(512 * 1024 * 1024, 512 * 1024 * 1024);
@@ -3409,7 +3409,7 @@ namespace {
       }
 
       google::protobuf::io::ZeroCopyInputStream* input =
-          new google::protobuf::io::ArrayInputStream(PyStr_AsString(value), PyBytes_Size(value));
+          new google::protobuf::io::ArrayInputStream(PyBytes_AsString(value), PyBytes_Size(value));
       google::protobuf::io::CodedInputStream* inputStream =
           new google::protobuf::io::CodedInputStream(input);
       inputStream->SetTotalBytesLimit(512 * 1024 * 1024, 512 * 1024 * 1024);
@@ -3850,7 +3850,7 @@ namespace {
         result << "version=";
         member = Info_getversion(self, NULL);
         memberRepr = PyObject_Repr(member);
-        result << PyStr_AsString(memberRepr);
+        result << PyBytes_AsString(memberRepr);
         Py_XDECREF(memberRepr);
         Py_XDECREF(member);
       
@@ -3860,7 +3860,7 @@ namespace {
         result << "timestamp=";
         member = Info_gettimestamp(self, NULL);
         memberRepr = PyObject_Repr(member);
-        result << PyStr_AsString(memberRepr);
+        result << PyBytes_AsString(memberRepr);
         Py_XDECREF(memberRepr);
         Py_XDECREF(member);
       
@@ -3870,7 +3870,7 @@ namespace {
         result << "changeset=";
         member = Info_getchangeset(self, NULL);
         memberRepr = PyObject_Repr(member);
-        result << PyStr_AsString(memberRepr);
+        result << PyBytes_AsString(memberRepr);
         Py_XDECREF(memberRepr);
         Py_XDECREF(member);
       
@@ -3880,7 +3880,7 @@ namespace {
         result << "uid=";
         member = Info_getuid(self, NULL);
         memberRepr = PyObject_Repr(member);
-        result << PyStr_AsString(memberRepr);
+        result << PyBytes_AsString(memberRepr);
         Py_XDECREF(memberRepr);
         Py_XDECREF(member);
       
@@ -3890,7 +3890,7 @@ namespace {
         result << "user_sid=";
         member = Info_getuser_sid(self, NULL);
         memberRepr = PyObject_Repr(member);
-        result << PyStr_AsString(memberRepr);
+        result << PyBytes_AsString(memberRepr);
         Py_XDECREF(memberRepr);
         Py_XDECREF(member);
       
@@ -4089,7 +4089,7 @@ namespace {
   PyObject *
   StringTable_ParseFromString(StringTable* self, PyObject *value)
   {
-      std::string serialized(PyStr_AsString(value), PyBytes_Size(value));
+      std::string serialized(PyBytes_AsString(value), PyBytes_Size(value));
       Py_BEGIN_ALLOW_THREADS
       self->protobuf->ParseFromString(serialized);
       Py_END_ALLOW_THREADS
@@ -4101,7 +4101,7 @@ namespace {
   StringTable_ParseFromLongString(StringTable* self, PyObject *value)
   {
       google::protobuf::io::ZeroCopyInputStream* input =
-          new google::protobuf::io::ArrayInputStream(PyStr_AsString(value), PyBytes_Size(value));
+          new google::protobuf::io::ArrayInputStream(PyBytes_AsString(value), PyBytes_Size(value));
       google::protobuf::io::CodedInputStream* inputStream =
           new google::protobuf::io::CodedInputStream(input);
       inputStream->SetTotalBytesLimit(512 * 1024 * 1024, 512 * 1024 * 1024);
@@ -4129,7 +4129,7 @@ namespace {
       }
 
       google::protobuf::io::ZeroCopyInputStream* input =
-          new google::protobuf::io::ArrayInputStream(PyStr_AsString(value), PyBytes_Size(value));
+          new google::protobuf::io::ArrayInputStream(PyBytes_AsString(value), PyBytes_Size(value));
       google::protobuf::io::CodedInputStream* inputStream =
           new google::protobuf::io::CodedInputStream(input);
       inputStream->SetTotalBytesLimit(512 * 1024 * 1024, 512 * 1024 * 1024);
@@ -4225,7 +4225,7 @@ namespace {
           return -1;
         }
 
-        std::string protoValue(PyStr_AsString(value), PyBytes_Size(value));
+        std::string protoValue(PyBytes_AsString(value), PyBytes_Size(value));
 
       
 
@@ -4337,7 +4337,7 @@ namespace {
         result << "s=";
         member = StringTable_gets(self, NULL);
         memberRepr = PyObject_Repr(member);
-        result << PyStr_AsString(memberRepr);
+        result << PyBytes_AsString(memberRepr);
         Py_XDECREF(memberRepr);
         Py_XDECREF(member);
       
@@ -4516,7 +4516,7 @@ namespace {
   PyObject *
   DenseNodes_ParseFromString(DenseNodes* self, PyObject *value)
   {
-      std::string serialized(PyStr_AsString(value), PyBytes_Size(value));
+      std::string serialized(PyBytes_AsString(value), PyBytes_Size(value));
       Py_BEGIN_ALLOW_THREADS
       self->protobuf->ParseFromString(serialized);
       Py_END_ALLOW_THREADS
@@ -4528,7 +4528,7 @@ namespace {
   DenseNodes_ParseFromLongString(DenseNodes* self, PyObject *value)
   {
       google::protobuf::io::ZeroCopyInputStream* input =
-          new google::protobuf::io::ArrayInputStream(PyStr_AsString(value), PyBytes_Size(value));
+          new google::protobuf::io::ArrayInputStream(PyBytes_AsString(value), PyBytes_Size(value));
       google::protobuf::io::CodedInputStream* inputStream =
           new google::protobuf::io::CodedInputStream(input);
       inputStream->SetTotalBytesLimit(512 * 1024 * 1024, 512 * 1024 * 1024);
@@ -4556,7 +4556,7 @@ namespace {
       }
 
       google::protobuf::io::ZeroCopyInputStream* input =
-          new google::protobuf::io::ArrayInputStream(PyStr_AsString(value), PyBytes_Size(value));
+          new google::protobuf::io::ArrayInputStream(PyBytes_AsString(value), PyBytes_Size(value));
       google::protobuf::io::CodedInputStream* inputStream =
           new google::protobuf::io::CodedInputStream(input);
       inputStream->SetTotalBytesLimit(512 * 1024 * 1024, 512 * 1024 * 1024);
@@ -5069,7 +5069,7 @@ namespace {
         result << "id=";
         member = DenseNodes_getid(self, NULL);
         memberRepr = PyObject_Repr(member);
-        result << PyStr_AsString(memberRepr);
+        result << PyBytes_AsString(memberRepr);
         Py_XDECREF(memberRepr);
         Py_XDECREF(member);
       
@@ -5079,7 +5079,7 @@ namespace {
         result << "denseinfo=";
         member = DenseNodes_getdenseinfo(self, NULL);
         memberRepr = PyObject_Repr(member);
-        result << PyStr_AsString(memberRepr);
+        result << PyBytes_AsString(memberRepr);
         Py_XDECREF(memberRepr);
         Py_XDECREF(member);
       
@@ -5089,7 +5089,7 @@ namespace {
         result << "lat=";
         member = DenseNodes_getlat(self, NULL);
         memberRepr = PyObject_Repr(member);
-        result << PyStr_AsString(memberRepr);
+        result << PyBytes_AsString(memberRepr);
         Py_XDECREF(memberRepr);
         Py_XDECREF(member);
       
@@ -5099,7 +5099,7 @@ namespace {
         result << "lon=";
         member = DenseNodes_getlon(self, NULL);
         memberRepr = PyObject_Repr(member);
-        result << PyStr_AsString(memberRepr);
+        result << PyBytes_AsString(memberRepr);
         Py_XDECREF(memberRepr);
         Py_XDECREF(member);
       
@@ -5109,7 +5109,7 @@ namespace {
         result << "keys_vals=";
         member = DenseNodes_getkeys_vals(self, NULL);
         memberRepr = PyObject_Repr(member);
-        result << PyStr_AsString(memberRepr);
+        result << PyBytes_AsString(memberRepr);
         Py_XDECREF(memberRepr);
         Py_XDECREF(member);
       
@@ -5308,7 +5308,7 @@ namespace {
   PyObject *
   HeaderBlock_ParseFromString(HeaderBlock* self, PyObject *value)
   {
-      std::string serialized(PyStr_AsString(value), PyBytes_Size(value));
+      std::string serialized(PyBytes_AsString(value), PyBytes_Size(value));
       Py_BEGIN_ALLOW_THREADS
       self->protobuf->ParseFromString(serialized);
       Py_END_ALLOW_THREADS
@@ -5320,7 +5320,7 @@ namespace {
   HeaderBlock_ParseFromLongString(HeaderBlock* self, PyObject *value)
   {
       google::protobuf::io::ZeroCopyInputStream* input =
-          new google::protobuf::io::ArrayInputStream(PyStr_AsString(value), PyBytes_Size(value));
+          new google::protobuf::io::ArrayInputStream(PyBytes_AsString(value), PyBytes_Size(value));
       google::protobuf::io::CodedInputStream* inputStream =
           new google::protobuf::io::CodedInputStream(input);
       inputStream->SetTotalBytesLimit(512 * 1024 * 1024, 512 * 1024 * 1024);
@@ -5348,7 +5348,7 @@ namespace {
       }
 
       google::protobuf::io::ZeroCopyInputStream* input =
-          new google::protobuf::io::ArrayInputStream(PyStr_AsString(value), PyBytes_Size(value));
+          new google::protobuf::io::ArrayInputStream(PyBytes_AsString(value), PyBytes_Size(value));
       google::protobuf::io::CodedInputStream* inputStream =
           new google::protobuf::io::CodedInputStream(input);
       inputStream->SetTotalBytesLimit(512 * 1024 * 1024, 512 * 1024 * 1024);
@@ -5512,7 +5512,7 @@ namespace {
           return -1;
         }
 
-        std::string protoValue(PyStr_AsString(value), PyBytes_Size(value));
+        std::string protoValue(PyBytes_AsString(value), PyBytes_Size(value));
         if (reallocated) {
           Py_XDECREF(value);
         }
@@ -5586,7 +5586,7 @@ namespace {
           return -1;
         }
 
-        std::string protoValue(PyStr_AsString(value), PyBytes_Size(value));
+        std::string protoValue(PyBytes_AsString(value), PyBytes_Size(value));
         if (reallocated) {
           Py_XDECREF(value);
         }
@@ -5647,7 +5647,7 @@ namespace {
           return -1;
         }
 
-        std::string protoValue(PyStr_AsString(value), PyBytes_Size(value));
+        std::string protoValue(PyBytes_AsString(value), PyBytes_Size(value));
         if (reallocated) {
           Py_XDECREF(value);
         }
@@ -5705,7 +5705,7 @@ namespace {
           return -1;
         }
 
-        std::string protoValue(PyStr_AsString(value), PyBytes_Size(value));
+        std::string protoValue(PyBytes_AsString(value), PyBytes_Size(value));
         if (reallocated) {
           Py_XDECREF(value);
         }
@@ -5857,7 +5857,7 @@ namespace {
         result << "bbox=";
         member = HeaderBlock_getbbox(self, NULL);
         memberRepr = PyObject_Repr(member);
-        result << PyStr_AsString(memberRepr);
+        result << PyBytes_AsString(memberRepr);
         Py_XDECREF(memberRepr);
         Py_XDECREF(member);
       
@@ -5867,7 +5867,7 @@ namespace {
         result << "required_features=";
         member = HeaderBlock_getrequired_features(self, NULL);
         memberRepr = PyObject_Repr(member);
-        result << PyStr_AsString(memberRepr);
+        result << PyBytes_AsString(memberRepr);
         Py_XDECREF(memberRepr);
         Py_XDECREF(member);
       
@@ -5877,7 +5877,7 @@ namespace {
         result << "optional_features=";
         member = HeaderBlock_getoptional_features(self, NULL);
         memberRepr = PyObject_Repr(member);
-        result << PyStr_AsString(memberRepr);
+        result << PyBytes_AsString(memberRepr);
         Py_XDECREF(memberRepr);
         Py_XDECREF(member);
       
@@ -5887,7 +5887,7 @@ namespace {
         result << "writingprogram=";
         member = HeaderBlock_getwritingprogram(self, NULL);
         memberRepr = PyObject_Repr(member);
-        result << PyStr_AsString(memberRepr);
+        result << PyBytes_AsString(memberRepr);
         Py_XDECREF(memberRepr);
         Py_XDECREF(member);
       
@@ -5897,7 +5897,7 @@ namespace {
         result << "source=";
         member = HeaderBlock_getsource(self, NULL);
         memberRepr = PyObject_Repr(member);
-        result << PyStr_AsString(memberRepr);
+        result << PyBytes_AsString(memberRepr);
         Py_XDECREF(memberRepr);
         Py_XDECREF(member);
       
@@ -6096,7 +6096,7 @@ namespace {
   PyObject *
   Node_ParseFromString(Node* self, PyObject *value)
   {
-      std::string serialized(PyStr_AsString(value), PyBytes_Size(value));
+      std::string serialized(PyBytes_AsString(value), PyBytes_Size(value));
       Py_BEGIN_ALLOW_THREADS
       self->protobuf->ParseFromString(serialized);
       Py_END_ALLOW_THREADS
@@ -6108,7 +6108,7 @@ namespace {
   Node_ParseFromLongString(Node* self, PyObject *value)
   {
       google::protobuf::io::ZeroCopyInputStream* input =
-          new google::protobuf::io::ArrayInputStream(PyStr_AsString(value), PyBytes_Size(value));
+          new google::protobuf::io::ArrayInputStream(PyBytes_AsString(value), PyBytes_Size(value));
       google::protobuf::io::CodedInputStream* inputStream =
           new google::protobuf::io::CodedInputStream(input);
       inputStream->SetTotalBytesLimit(512 * 1024 * 1024, 512 * 1024 * 1024);
@@ -6136,7 +6136,7 @@ namespace {
       }
 
       google::protobuf::io::ZeroCopyInputStream* input =
-          new google::protobuf::io::ArrayInputStream(PyStr_AsString(value), PyBytes_Size(value));
+          new google::protobuf::io::ArrayInputStream(PyBytes_AsString(value), PyBytes_Size(value));
       google::protobuf::io::CodedInputStream* inputStream =
           new google::protobuf::io::CodedInputStream(input);
       inputStream->SetTotalBytesLimit(512 * 1024 * 1024, 512 * 1024 * 1024);
@@ -6682,7 +6682,7 @@ namespace {
         result << "id=";
         member = Node_getid(self, NULL);
         memberRepr = PyObject_Repr(member);
-        result << PyStr_AsString(memberRepr);
+        result << PyBytes_AsString(memberRepr);
         Py_XDECREF(memberRepr);
         Py_XDECREF(member);
       
@@ -6692,7 +6692,7 @@ namespace {
         result << "keys=";
         member = Node_getkeys(self, NULL);
         memberRepr = PyObject_Repr(member);
-        result << PyStr_AsString(memberRepr);
+        result << PyBytes_AsString(memberRepr);
         Py_XDECREF(memberRepr);
         Py_XDECREF(member);
       
@@ -6702,7 +6702,7 @@ namespace {
         result << "vals=";
         member = Node_getvals(self, NULL);
         memberRepr = PyObject_Repr(member);
-        result << PyStr_AsString(memberRepr);
+        result << PyBytes_AsString(memberRepr);
         Py_XDECREF(memberRepr);
         Py_XDECREF(member);
       
@@ -6712,7 +6712,7 @@ namespace {
         result << "info=";
         member = Node_getinfo(self, NULL);
         memberRepr = PyObject_Repr(member);
-        result << PyStr_AsString(memberRepr);
+        result << PyBytes_AsString(memberRepr);
         Py_XDECREF(memberRepr);
         Py_XDECREF(member);
       
@@ -6722,7 +6722,7 @@ namespace {
         result << "lat=";
         member = Node_getlat(self, NULL);
         memberRepr = PyObject_Repr(member);
-        result << PyStr_AsString(memberRepr);
+        result << PyBytes_AsString(memberRepr);
         Py_XDECREF(memberRepr);
         Py_XDECREF(member);
       
@@ -6732,7 +6732,7 @@ namespace {
         result << "lon=";
         member = Node_getlon(self, NULL);
         memberRepr = PyObject_Repr(member);
-        result << PyStr_AsString(memberRepr);
+        result << PyBytes_AsString(memberRepr);
         Py_XDECREF(memberRepr);
         Py_XDECREF(member);
       
@@ -6936,7 +6936,7 @@ namespace {
   PyObject *
   Relation_ParseFromString(Relation* self, PyObject *value)
   {
-      std::string serialized(PyStr_AsString(value), PyBytes_Size(value));
+      std::string serialized(PyBytes_AsString(value), PyBytes_Size(value));
       Py_BEGIN_ALLOW_THREADS
       self->protobuf->ParseFromString(serialized);
       Py_END_ALLOW_THREADS
@@ -6948,7 +6948,7 @@ namespace {
   Relation_ParseFromLongString(Relation* self, PyObject *value)
   {
       google::protobuf::io::ZeroCopyInputStream* input =
-          new google::protobuf::io::ArrayInputStream(PyStr_AsString(value), PyBytes_Size(value));
+          new google::protobuf::io::ArrayInputStream(PyBytes_AsString(value), PyBytes_Size(value));
       google::protobuf::io::CodedInputStream* inputStream =
           new google::protobuf::io::CodedInputStream(input);
       inputStream->SetTotalBytesLimit(512 * 1024 * 1024, 512 * 1024 * 1024);
@@ -6976,7 +6976,7 @@ namespace {
       }
 
       google::protobuf::io::ZeroCopyInputStream* input =
-          new google::protobuf::io::ArrayInputStream(PyStr_AsString(value), PyBytes_Size(value));
+          new google::protobuf::io::ArrayInputStream(PyBytes_AsString(value), PyBytes_Size(value));
       google::protobuf::io::CodedInputStream* inputStream =
           new google::protobuf::io::CodedInputStream(input);
       inputStream->SetTotalBytesLimit(512 * 1024 * 1024, 512 * 1024 * 1024);
@@ -7632,7 +7632,7 @@ namespace {
         result << "id=";
         member = Relation_getid(self, NULL);
         memberRepr = PyObject_Repr(member);
-        result << PyStr_AsString(memberRepr);
+        result << PyBytes_AsString(memberRepr);
         Py_XDECREF(memberRepr);
         Py_XDECREF(member);
       
@@ -7642,7 +7642,7 @@ namespace {
         result << "keys=";
         member = Relation_getkeys(self, NULL);
         memberRepr = PyObject_Repr(member);
-        result << PyStr_AsString(memberRepr);
+        result << PyBytes_AsString(memberRepr);
         Py_XDECREF(memberRepr);
         Py_XDECREF(member);
       
@@ -7652,7 +7652,7 @@ namespace {
         result << "vals=";
         member = Relation_getvals(self, NULL);
         memberRepr = PyObject_Repr(member);
-        result << PyStr_AsString(memberRepr);
+        result << PyBytes_AsString(memberRepr);
         Py_XDECREF(memberRepr);
         Py_XDECREF(member);
       
@@ -7662,7 +7662,7 @@ namespace {
         result << "info=";
         member = Relation_getinfo(self, NULL);
         memberRepr = PyObject_Repr(member);
-        result << PyStr_AsString(memberRepr);
+        result << PyBytes_AsString(memberRepr);
         Py_XDECREF(memberRepr);
         Py_XDECREF(member);
       
@@ -7672,7 +7672,7 @@ namespace {
         result << "roles_sid=";
         member = Relation_getroles_sid(self, NULL);
         memberRepr = PyObject_Repr(member);
-        result << PyStr_AsString(memberRepr);
+        result << PyBytes_AsString(memberRepr);
         Py_XDECREF(memberRepr);
         Py_XDECREF(member);
       
@@ -7682,7 +7682,7 @@ namespace {
         result << "memids=";
         member = Relation_getmemids(self, NULL);
         memberRepr = PyObject_Repr(member);
-        result << PyStr_AsString(memberRepr);
+        result << PyBytes_AsString(memberRepr);
         Py_XDECREF(memberRepr);
         Py_XDECREF(member);
       
@@ -7692,7 +7692,7 @@ namespace {
         result << "types=";
         member = Relation_gettypes(self, NULL);
         memberRepr = PyObject_Repr(member);
-        result << PyStr_AsString(memberRepr);
+        result << PyBytes_AsString(memberRepr);
         Py_XDECREF(memberRepr);
         Py_XDECREF(member);
       
@@ -7901,7 +7901,7 @@ namespace {
   PyObject *
   Way_ParseFromString(Way* self, PyObject *value)
   {
-      std::string serialized(PyStr_AsString(value), PyBytes_Size(value));
+      std::string serialized(PyBytes_AsString(value), PyBytes_Size(value));
       Py_BEGIN_ALLOW_THREADS
       self->protobuf->ParseFromString(serialized);
       Py_END_ALLOW_THREADS
@@ -7913,7 +7913,7 @@ namespace {
   Way_ParseFromLongString(Way* self, PyObject *value)
   {
       google::protobuf::io::ZeroCopyInputStream* input =
-          new google::protobuf::io::ArrayInputStream(PyStr_AsString(value), PyBytes_Size(value));
+          new google::protobuf::io::ArrayInputStream(PyBytes_AsString(value), PyBytes_Size(value));
       google::protobuf::io::CodedInputStream* inputStream =
           new google::protobuf::io::CodedInputStream(input);
       inputStream->SetTotalBytesLimit(512 * 1024 * 1024, 512 * 1024 * 1024);
@@ -7941,7 +7941,7 @@ namespace {
       }
 
       google::protobuf::io::ZeroCopyInputStream* input =
-          new google::protobuf::io::ArrayInputStream(PyStr_AsString(value), PyBytes_Size(value));
+          new google::protobuf::io::ArrayInputStream(PyBytes_AsString(value), PyBytes_Size(value));
       google::protobuf::io::CodedInputStream* inputStream =
           new google::protobuf::io::CodedInputStream(input);
       inputStream->SetTotalBytesLimit(512 * 1024 * 1024, 512 * 1024 * 1024);
@@ -8440,7 +8440,7 @@ namespace {
         result << "id=";
         member = Way_getid(self, NULL);
         memberRepr = PyObject_Repr(member);
-        result << PyStr_AsString(memberRepr);
+        result << PyBytes_AsString(memberRepr);
         Py_XDECREF(memberRepr);
         Py_XDECREF(member);
       
@@ -8450,7 +8450,7 @@ namespace {
         result << "keys=";
         member = Way_getkeys(self, NULL);
         memberRepr = PyObject_Repr(member);
-        result << PyStr_AsString(memberRepr);
+        result << PyBytes_AsString(memberRepr);
         Py_XDECREF(memberRepr);
         Py_XDECREF(member);
       
@@ -8460,7 +8460,7 @@ namespace {
         result << "vals=";
         member = Way_getvals(self, NULL);
         memberRepr = PyObject_Repr(member);
-        result << PyStr_AsString(memberRepr);
+        result << PyBytes_AsString(memberRepr);
         Py_XDECREF(memberRepr);
         Py_XDECREF(member);
       
@@ -8470,7 +8470,7 @@ namespace {
         result << "info=";
         member = Way_getinfo(self, NULL);
         memberRepr = PyObject_Repr(member);
-        result << PyStr_AsString(memberRepr);
+        result << PyBytes_AsString(memberRepr);
         Py_XDECREF(memberRepr);
         Py_XDECREF(member);
       
@@ -8480,7 +8480,7 @@ namespace {
         result << "refs=";
         member = Way_getrefs(self, NULL);
         memberRepr = PyObject_Repr(member);
-        result << PyStr_AsString(memberRepr);
+        result << PyBytes_AsString(memberRepr);
         Py_XDECREF(memberRepr);
         Py_XDECREF(member);
       
@@ -8679,7 +8679,7 @@ namespace {
   PyObject *
   PrimitiveGroup_ParseFromString(PrimitiveGroup* self, PyObject *value)
   {
-      std::string serialized(PyStr_AsString(value), PyBytes_Size(value));
+      std::string serialized(PyBytes_AsString(value), PyBytes_Size(value));
       Py_BEGIN_ALLOW_THREADS
       self->protobuf->ParseFromString(serialized);
       Py_END_ALLOW_THREADS
@@ -8691,7 +8691,7 @@ namespace {
   PrimitiveGroup_ParseFromLongString(PrimitiveGroup* self, PyObject *value)
   {
       google::protobuf::io::ZeroCopyInputStream* input =
-          new google::protobuf::io::ArrayInputStream(PyStr_AsString(value), PyBytes_Size(value));
+          new google::protobuf::io::ArrayInputStream(PyBytes_AsString(value), PyBytes_Size(value));
       google::protobuf::io::CodedInputStream* inputStream =
           new google::protobuf::io::CodedInputStream(input);
       inputStream->SetTotalBytesLimit(512 * 1024 * 1024, 512 * 1024 * 1024);
@@ -8719,7 +8719,7 @@ namespace {
       }
 
       google::protobuf::io::ZeroCopyInputStream* input =
-          new google::protobuf::io::ArrayInputStream(PyStr_AsString(value), PyBytes_Size(value));
+          new google::protobuf::io::ArrayInputStream(PyBytes_AsString(value), PyBytes_Size(value));
       google::protobuf::io::CodedInputStream* inputStream =
           new google::protobuf::io::CodedInputStream(input);
       inputStream->SetTotalBytesLimit(512 * 1024 * 1024, 512 * 1024 * 1024);
@@ -9272,7 +9272,7 @@ namespace {
         result << "nodes=";
         member = PrimitiveGroup_getnodes(self, NULL);
         memberRepr = PyObject_Repr(member);
-        result << PyStr_AsString(memberRepr);
+        result << PyBytes_AsString(memberRepr);
         Py_XDECREF(memberRepr);
         Py_XDECREF(member);
       
@@ -9282,7 +9282,7 @@ namespace {
         result << "dense=";
         member = PrimitiveGroup_getdense(self, NULL);
         memberRepr = PyObject_Repr(member);
-        result << PyStr_AsString(memberRepr);
+        result << PyBytes_AsString(memberRepr);
         Py_XDECREF(memberRepr);
         Py_XDECREF(member);
       
@@ -9292,7 +9292,7 @@ namespace {
         result << "ways=";
         member = PrimitiveGroup_getways(self, NULL);
         memberRepr = PyObject_Repr(member);
-        result << PyStr_AsString(memberRepr);
+        result << PyBytes_AsString(memberRepr);
         Py_XDECREF(memberRepr);
         Py_XDECREF(member);
       
@@ -9302,7 +9302,7 @@ namespace {
         result << "relations=";
         member = PrimitiveGroup_getrelations(self, NULL);
         memberRepr = PyObject_Repr(member);
-        result << PyStr_AsString(memberRepr);
+        result << PyBytes_AsString(memberRepr);
         Py_XDECREF(memberRepr);
         Py_XDECREF(member);
       
@@ -9312,7 +9312,7 @@ namespace {
         result << "changesets=";
         member = PrimitiveGroup_getchangesets(self, NULL);
         memberRepr = PyObject_Repr(member);
-        result << PyStr_AsString(memberRepr);
+        result << PyBytes_AsString(memberRepr);
         Py_XDECREF(memberRepr);
         Py_XDECREF(member);
       
@@ -9511,7 +9511,7 @@ namespace {
   PyObject *
   PrimitiveBlock_ParseFromString(PrimitiveBlock* self, PyObject *value)
   {
-      std::string serialized(PyStr_AsString(value), PyBytes_Size(value));
+      std::string serialized(PyBytes_AsString(value), PyBytes_Size(value));
       Py_BEGIN_ALLOW_THREADS
       self->protobuf->ParseFromString(serialized);
       Py_END_ALLOW_THREADS
@@ -9523,7 +9523,7 @@ namespace {
   PrimitiveBlock_ParseFromLongString(PrimitiveBlock* self, PyObject *value)
   {
       google::protobuf::io::ZeroCopyInputStream* input =
-          new google::protobuf::io::ArrayInputStream(PyStr_AsString(value), PyBytes_Size(value));
+          new google::protobuf::io::ArrayInputStream(PyBytes_AsString(value), PyBytes_Size(value));
       google::protobuf::io::CodedInputStream* inputStream =
           new google::protobuf::io::CodedInputStream(input);
       inputStream->SetTotalBytesLimit(512 * 1024 * 1024, 512 * 1024 * 1024);
@@ -9551,7 +9551,7 @@ namespace {
       }
 
       google::protobuf::io::ZeroCopyInputStream* input =
-          new google::protobuf::io::ArrayInputStream(PyStr_AsString(value), PyBytes_Size(value));
+          new google::protobuf::io::ArrayInputStream(PyBytes_AsString(value), PyBytes_Size(value));
       google::protobuf::io::CodedInputStream* inputStream =
           new google::protobuf::io::CodedInputStream(input);
       inputStream->SetTotalBytesLimit(512 * 1024 * 1024, 512 * 1024 * 1024);
@@ -10087,7 +10087,7 @@ namespace {
         result << "stringtable=";
         member = PrimitiveBlock_getstringtable(self, NULL);
         memberRepr = PyObject_Repr(member);
-        result << PyStr_AsString(memberRepr);
+        result << PyBytes_AsString(memberRepr);
         Py_XDECREF(memberRepr);
         Py_XDECREF(member);
       
@@ -10097,7 +10097,7 @@ namespace {
         result << "primitivegroup=";
         member = PrimitiveBlock_getprimitivegroup(self, NULL);
         memberRepr = PyObject_Repr(member);
-        result << PyStr_AsString(memberRepr);
+        result << PyBytes_AsString(memberRepr);
         Py_XDECREF(memberRepr);
         Py_XDECREF(member);
       
@@ -10107,7 +10107,7 @@ namespace {
         result << "granularity=";
         member = PrimitiveBlock_getgranularity(self, NULL);
         memberRepr = PyObject_Repr(member);
-        result << PyStr_AsString(memberRepr);
+        result << PyBytes_AsString(memberRepr);
         Py_XDECREF(memberRepr);
         Py_XDECREF(member);
       
@@ -10117,7 +10117,7 @@ namespace {
         result << "lat_offset=";
         member = PrimitiveBlock_getlat_offset(self, NULL);
         memberRepr = PyObject_Repr(member);
-        result << PyStr_AsString(memberRepr);
+        result << PyBytes_AsString(memberRepr);
         Py_XDECREF(memberRepr);
         Py_XDECREF(member);
       
@@ -10127,7 +10127,7 @@ namespace {
         result << "lon_offset=";
         member = PrimitiveBlock_getlon_offset(self, NULL);
         memberRepr = PyObject_Repr(member);
-        result << PyStr_AsString(memberRepr);
+        result << PyBytes_AsString(memberRepr);
         Py_XDECREF(memberRepr);
         Py_XDECREF(member);
       
@@ -10137,7 +10137,7 @@ namespace {
         result << "date_granularity=";
         member = PrimitiveBlock_getdate_granularity(self, NULL);
         memberRepr = PyObject_Repr(member);
-        result << PyStr_AsString(memberRepr);
+        result << PyBytes_AsString(memberRepr);
         Py_XDECREF(memberRepr);
         Py_XDECREF(member);
       

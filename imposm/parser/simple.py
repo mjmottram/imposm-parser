@@ -119,7 +119,7 @@ class OSMParser(object):
         
         while queues_callbacks:
             processed = False
-            for items_type, (queue, callback) in queues_callbacks.items():
+            for items_type, (queue, callback) in list(queues_callbacks.items()):
                 try:
                     items = None
                     while True:
