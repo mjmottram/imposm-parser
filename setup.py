@@ -38,8 +38,6 @@ if tuple(map(str, platform.python_version_tuple())) < ('2', '6'):
 if tuple(map(str, platform.python_version_tuple())) < ('3', '0'):
     install_requires.append('future>=0.17')
 
-py3c_include_dirs = [os.path.join(p, "include", "site") for p in site.PREFIXES]
-
 setup(
     name='imposm.parser',
     version="1.0.8a",
@@ -60,9 +58,8 @@ setup(
         "Operating System :: OS Independent",
         "Programming Language :: C",
         "Programming Language :: C++",
-        "Programming Language :: Python :: 2.5",
-        "Programming Language :: Python :: 2.6",
         "Programming Language :: Python :: 2.7",
+        "Programming Language :: Python :: 3.7",
         "Topic :: Software Development :: Libraries",
         "Topic :: Scientific/Engineering :: GIS",
     ],
