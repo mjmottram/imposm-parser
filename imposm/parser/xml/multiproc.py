@@ -15,6 +15,7 @@
 import mmap
 import multiprocessing
 import re
+import sys
 
 from queue import Empty
 
