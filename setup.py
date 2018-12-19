@@ -5,6 +5,7 @@ import site
 from setuptools import setup, Extension, find_packages
 from setuptools.command.build_ext import build_ext
 from distutils.errors import DistutilsPlatformError
+from distutils import sysconfig
 
 import subprocess
 
@@ -32,13 +33,16 @@ class build_ext_with_protpbuf(build_ext):
         build_ext.run(self)
 
 
-install_requires = []
+install_requires = ['py3c']
 if tuple(map(str, platform.python_version_tuple())) < ('2', '6'):
     install_requires.append('multiprocessing>=2.6')
 if tuple(map(str, platform.python_version_tuple())) < ('3', '0'):
     install_requires.append('future>=0.17')
 
-py3c_include_dirs = [os.path.join(p, "include", "site") for p in site.PREFIXES]
+include_dirs = []
+venv_include_dir = os.path.join(sysconfig.PREFIX, 'include', 'site', 'python' + sysconfig.get_python_version())
+if os.path.exists(venv_include_dir):
+    include_dirs.append(venv_include_dir)
 
 setup(
     name='imposm.parser',
@@ -60,15 +64,14 @@ setup(
         "Operating System :: OS Independent",
         "Programming Language :: C",
         "Programming Language :: C++",
-        "Programming Language :: Python :: 2.5",
-        "Programming Language :: Python :: 2.6",
         "Programming Language :: Python :: 2.7",
+        "Programming Language :: Python :: 3.7",
         "Topic :: Software Development :: Libraries",
         "Topic :: Scientific/Engineering :: GIS",
     ],
     ext_modules=[
         Extension("imposm.parser.pbf.OSMPBF",
-                  ["imposm/parser/pbf/osm.cc", "imposm/parser/pbf/osm.pb.cc"], libraries=['protobuf'], include_dirs=['py3c_headers']),
+                  ["imposm/parser/pbf/osm.cc", "imposm/parser/pbf/osm.pb.cc"], libraries=['protobuf'], include_dirs=include_dirs),
     ],
     cmdclass={'build_ext':build_ext_with_protpbuf},
 )
