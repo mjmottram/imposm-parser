@@ -5,11 +5,9 @@ imposm.parser - OpenStreetMap XML/PBF parser for Python
 
 It has a simple API and it is fast and easy to use. It also works across multiple CPU/cores for extra speed.
 
-.. note::
-  **Imposm-parser is in maintenance mode and it's unlikely that we will provide any further releases.**
+It was originally developed  by `Omniscale <http://omniscale.com>`_ and released under the `Apache Software License 2.0 <http://www.apache.org/licenses/LICENSE-2.0>`_.
 
-
-It is developed and supported by `Omniscale <http://omniscale.com>`_ and released under the `Apache Software License 2.0 <http://www.apache.org/licenses/LICENSE-2.0>`_.
+This fork has been updated for compatibility with python 3.
 
 Example
 -------
